@@ -1,0 +1,118 @@
+/*
+ * Responsive game UI. No external fonts, CSS libraries or remote assets.
+ * Everything can be published on free static hosting (GitHub Pages).
+ */
+:root {
+  color-scheme: light;
+  --navy: #182c4c;
+  --muted: #65748a;
+  --blue: #236bd8;
+  --red: #d7394d;
+  --green: #2a965e;
+  --pale-blue: #d2e6ff;  /* X threat */
+  --pale-red: #ffd7dc;   /* O threat */
+  --pale-green: #e0f8eb; /* completed win */
+  --yellow: #ffeb9b;
+  --edge: #dce4f0;
+  --background: #f3f6fb;
+  --field: #f2f6fc;
+  --shadow: 0 2px 12px rgba(24, 44, 76, .055);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { color: var(--navy); background: var(--background); }
+button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, .history-scroller:focus-visible { outline: 3px solid #6ba5ff; outline-offset: 2px; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+.app {
+  margin: 0 auto; padding: max(8px, env(safe-area-inset-top)) 12px max(8px, env(safe-area-inset-bottom));
+  max-width: 690px; height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column; min-height: 450px; gap: 9px;
+}
+.app-header { flex: none; display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 41px; }
+.infinity { color: #77a6eb; font: 700 38px/1 Georgia, serif; }
+h1 { font-size: clamp(17px, 4.2vw, 23px); line-height: 1.1; letter-spacing: -.4px; margin: 0; }
+h2 { font-size: 20px; margin: 0; font-weight: 720; letter-spacing: -.4px; }
+.section-icon { display: inline-flex; background: #eaf2fe; color: #527bad; border-radius: 50%; width: 27px; height: 27px; align-items: center; justify-content: center; font-size: 19px; margin-right: 4px; }
+.panel { background: white; border: 1px solid var(--edge); border-radius: 15px; box-shadow: var(--shadow); }
+.upper { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 9px; }
+.history-panel { flex: none; padding: 11px 8px 7px; height: 366px; display: flex; flex-direction: column; }
+.history-panel h2 { padding: 0 6px 10px; flex: none; }
+.history-scroller { overflow: auto; flex: 1; border-radius: 8px; border-top: 1px solid #eff2f7; }
+.history-table { min-width: 100%; width: max-content; padding: 3px 0; }
+.history-grid-row { display: grid; grid-template-columns: var(--grid-cols); align-items: center; min-height: 44px; column-gap: 3px; padding: 4px 8px; position: relative; border-bottom: 1px solid #f1f3f7; }
+.history-grid-row.threat-x { background: var(--pale-blue); border-radius: 7px; }
+.history-grid-row.threat-o { background: var(--pale-red); border-radius: 7px; }
+.history-grid-row.winning { background: var(--pale-green); border-radius: 7px; }
+.history-grid-row.heading { min-height: 45px; position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid var(--edge); }
+.heading .range { font-size: 11px; line-height: 1.25; text-align: center; font-weight: 700; white-space: nowrap; border-radius: 6px; padding: 4px 2px; }
+.heading .range.white { background: #f1f5fb; }
+.heading .range.yellow { background: #fff0b0; }
+.heading .smallheading { font-size: 11px; color: var(--muted); font-weight: 700; }
+.empty-history { padding: 30px 16px; color: var(--muted); font-size: 13px; }
+.move-number { color: #66758e; font-size: 13px; text-align: center; }
+.move-player { font-size: 21px; font-weight: 750; text-align: center; }
+.move-player.x { color: var(--blue); }
+.move-player.o { color: var(--red); }
+.coord { display: flex; align-items: center; justify-content: center; width: 28px; height: 31px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; border-radius: 6px; border: 1px solid #e3eaf4; background: #f4f7fb; color: #22324b; font-variant-numeric: tabular-nums; }
+.coord.repeating { background: #ffedaa; border-color: #ffe39b; }
+.coord.first-repeat { border-left: 2px solid #b89432; }
+.radial-panel { flex: none; height: 166px; padding: 4px 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#radialSvg { display: block; width: 100%; height: 100%; }
+.radial-ring { fill: none; stroke: #d6e0ee; stroke-width: 1; stroke-dasharray: 2 4; }
+.radial-cross { stroke: #e6edf6; stroke-width: 1; }
+.ray { opacity: .45; stroke-width: 2; stroke-linecap: round; }
+.ray.newest { opacity: .95; stroke-width: 3.3; animation: rayIn .45s ease-out both; }
+.ray.winning-glow { stroke: #5ccf8a; opacity: .28; stroke-width: 9; }
+.ray.winning { stroke: #2ea669; opacity: .7; stroke-width: 3; }
+.ray-end { opacity: .55; }
+.move-marker { font-family: Arial, sans-serif; font-size: 17px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+.move-marker.newest { font-size: 20px; paint-order: stroke; stroke: white; stroke-width: 2px; }
+@keyframes rayIn { from { stroke-dasharray: 0 650; } to { stroke-dasharray: 650 0; } }
+.bottom-dock { flex: none; display: flex; flex-direction: column; gap: 7px; }
+.entry-panel { padding: 10px 12px 11px; }
+.entry-panel h2 { margin-bottom: 8px; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.field-grid label { display: block; min-height: 20px; color: var(--muted); font-size: 11px; line-height: 1.15; font-weight: 600; margin-bottom: 4px; }
+.digit-field { border: 1px solid #d3dfed; width: 100%; height: 41px; border-radius: 9px; padding: 0 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #f5f8fc; color: var(--navy); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.digit-field span { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.digit-field.repeating { background: #fff1b9; border-color: #eacb63; }
+.digit-field.selected { outline: 2px solid #4d8dec; outline-offset: 0; }
+.digit-field.repeating.selected { outline-color: #bf9224; }
+.keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 9px; }
+.keypad button { height: 43px; background: #eff4fa; border: 1px solid #dce4ef; border-radius: 9px; color: var(--navy); font-size: 21px; font-weight: 730; }
+.keypad .delete { font-size: 13px; }
+.keypad button:active { background: #d8e4f6; transform: translateY(1px); }
+.go { height: 40px; border: 0; border-radius: 9px; margin-top: 8px; width: 100%; background: #266dd8; color: #fff; font-weight: 800; font-size: 23px; text-align: center; line-height: 40px; padding: 0; }
+.go:active { background: #1759b9; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 6px 10px; }
+.message-stack { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.turn-status { color: var(--blue); font-size: 14px; font-weight: 750; }
+.turn-status.o { color: var(--red); }
+.turn-status.win { color: var(--green); }
+.threat-status { color: #8c6014; font-size: 11px; line-height: 1.2; }
+.error-status { color: #bc2542; font-size: 11px; line-height: 1.25; }
+.threat-status:empty, .error-status:empty { display: none; }
+.new-game { background: #eff4fb; color: var(--navy); border: 1px solid #dce4f0; border-radius: 9px; font-size: 13px; font-weight: 730; padding: 10px 12px; white-space: nowrap; }
+/* On phone-sized screens show BOTH the short radial summary and the history
+ * at once; the move history itself remains independently scrollable. */
+@media (max-height: 950px) {
+  .history-panel { height: 318px; }
+  .radial-panel { height: 144px; }
+}
+@media (max-height: 715px) {
+  .history-panel { height: 330px; }
+  .app { gap: 6px; }
+  .radial-panel { height: 152px; }
+  .entry-panel { padding-top: 7px; padding-bottom: 8px; }
+  .keypad { margin-top: 6px; }
+}
+@media (max-width: 375px) {
+  .app { padding-left: 7px; padding-right: 7px; }
+  h1 { font-size: 17px; }
+  .entry-panel { padding-left: 9px; padding-right: 9px; }
+  .field-grid label { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f6fb">
+  <meta name="description" content="A two-player infinite-dimensional Tic-Tac-Toe game, played with repeating digit sequences.">
+  <title>Infinite-Dimensional Tic-Tac-Toe</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app" aria-label="Infinite-Dimensional Tic-Tac-Toe game">
+    <header class="app-header">
+      <span class="infinity" aria-hidden="true">∞</span>
+      <h1>Infinite-Dimensional Tic-Tac-Toe</h1>
+    </header>
+
+    <!-- The upper region scrolls; the keypad is kept accessible below. -->
+    <div class="upper" id="upperScroll">
+      <section class="panel history-panel" aria-label="Move history">
+        <h2><span class="section-icon" aria-hidden="true">◷</span> Move history</h2>
+        <div class="history-scroller" id="historyScroller" tabindex="0" aria-label="Scrollable move history">
+          <div id="historyTable" class="history-table"></div>
+        </div>
+      </section>
+
+      <!-- Intentionally no title and no legend for the radial illustration. -->
+      <section class="panel radial-panel" aria-label="Abstract radial visualization of moves">
+        <svg id="radialSvg" viewBox="0 0 360 192" role="img" aria-label="Each move is a ray; X is blue and O is red. The mark's distance from center represents its repeating digit average."></svg>
+      </section>
+    </div>
+
+    <div class="bottom-dock">
+      <section class="panel entry-panel" aria-label="Enter move">
+        <h2>Enter move</h2>
+        <div class="field-grid">
+          <div>
+            <label for="whiteSelect">Initial Dimensions</label>
+            <button id="whiteSelect" type="button" class="digit-field" aria-pressed="false" aria-label="Select initial dimensions field"><span id="whiteValue">Tap to enter</span></button>
+          </div>
+          <div>
+            <label for="yellowSelect">Infinite Repeating Dimensions</label>
+            <button id="yellowSelect" type="button" class="digit-field repeating selected" aria-pressed="true" aria-label="Select infinite repeating dimensions field"><span id="yellowValue">Tap to enter</span></button>
+          </div>
+        </div>
+        <div class="keypad" aria-label="Digit keypad">
+          <button type="button" data-digit="1">1</button>
+          <button type="button" data-digit="2">2</button>
+          <button type="button" data-digit="3">3</button>
+          <button type="button" id="deleteBtn" class="delete">Delete</button>
+        </div>
+        <button id="goButton" class="go" type="button">Go</button>
+      </section>
+
+      <footer class="panel footer">
+        <div class="message-stack">
+          <div id="turnStatus" class="turn-status" aria-live="polite">X to move</div>
+          <div id="threatStatus" class="threat-status" aria-live="polite"></div>
+          <div id="errorStatus" class="error-status" role="alert"></div>
+        </div>
+        <button id="newGameBtn" class="new-game" type="button">New Game</button>
+      </footer>
+    </div>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
