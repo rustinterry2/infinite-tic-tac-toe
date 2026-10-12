@@ -6,7 +6,146 @@
   <meta name="theme-color" content="#f3f6fb">
   <meta name="description" content="A two-player infinite-dimensional Tic-Tac-Toe game, played with repeating digit sequences.">
   <title>Infinite-Dimensional Tic-Tac-Toe</title>
-  <link rel="stylesheet" href="./style.css">
+  <style>
+/*
+ * Responsive game UI. No external fonts, CSS libraries or remote assets.
+ * Everything can be published on free static hosting (GitHub Pages).
+ */
+:root {
+  color-scheme: light;
+  --navy: #182c4c;
+  --muted: #65748a;
+  --blue: #236bd8;
+  --red: #d7394d;
+  --green: #2a965e;
+  --pale-blue: #d2e6ff;  /* X threat */
+  --pale-red: #ffd7dc;   /* O threat */
+  --pale-green: #e0f8eb; /* completed win */
+  --yellow: #ffeb9b;
+  --edge: #dce4f0;
+  --background: #f3f6fb;
+  --field: #f2f6fc;
+  --shadow: 0 2px 12px rgba(24, 44, 76, .055);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { color: var(--navy); background: var(--background); }
+button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, .history-scroller:focus-visible { outline: 3px solid #6ba5ff; outline-offset: 2px; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+.app {
+  margin: 0 auto; padding: max(8px, env(safe-area-inset-top)) 12px max(8px, env(safe-area-inset-bottom));
+  max-width: 690px; height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column; min-height: 450px; gap: 9px;
+}
+.app-header { flex: none; display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 41px; }
+.infinity { color: #77a6eb; font: 700 38px/1 Georgia, serif; }
+h1 { font-size: clamp(17px, 4.2vw, 23px); line-height: 1.1; letter-spacing: -.4px; margin: 0; }
+h2 { font-size: 20px; margin: 0; font-weight: 720; letter-spacing: -.4px; }
+.section-icon { display: inline-flex; background: #eaf2fe; color: #527bad; border-radius: 50%; width: 27px; height: 27px; align-items: center; justify-content: center; font-size: 19px; margin-right: 4px; }
+.panel { background: white; border: 1px solid var(--edge); border-radius: 15px; box-shadow: var(--shadow); }
+.upper { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 9px; }
+.history-panel { flex: none; padding: 11px 8px 7px; height: 366px; display: flex; flex-direction: column; }
+.history-panel h2 { padding: 0 6px 10px; flex: none; }
+.history-scroller { overflow: auto; flex: 1; border-radius: 8px; border-top: 1px solid #eff2f7; }
+.history-table { min-width: 100%; width: max-content; padding: 3px 0; }
+.history-grid-row { display: grid; grid-template-columns: var(--grid-cols); align-items: center; min-height: 44px; column-gap: 3px; padding: 4px 8px; position: relative; border-bottom: 1px solid #f1f3f7; }
+.history-grid-row.threat-x { background: var(--pale-blue); border-radius: 7px; }
+.history-grid-row.threat-o { background: var(--pale-red); border-radius: 7px; }
+.history-grid-row.winning { background: var(--pale-green); border-radius: 7px; }
+.history-grid-row.heading { min-height: 45px; position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid var(--edge); }
+.heading .range { font-size: 11px; line-height: 1.25; text-align: center; font-weight: 700; white-space: nowrap; border-radius: 6px; padding: 4px 2px; }
+.heading .range.white { background: #f1f5fb; }
+.heading .range.yellow { background: #fff0b0; }
+.heading .smallheading { font-size: 11px; color: var(--muted); font-weight: 700; }
+.empty-history { padding: 30px 16px; color: var(--muted); font-size: 13px; }
+.move-number { color: #66758e; font-size: 13px; text-align: center; }
+.move-player { font-size: 21px; font-weight: 750; text-align: center; }
+.move-player.x { color: var(--blue); }
+.move-player.o { color: var(--red); }
+.coord { display: flex; align-items: center; justify-content: center; width: 28px; height: 31px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; border-radius: 6px; border: 1px solid #e3eaf4; background: #f4f7fb; color: #22324b; font-variant-numeric: tabular-nums; }
+.coord.repeating { background: #ffedaa; border-color: #ffe39b; }
+.coord.first-repeat { border-left: 2px solid #b89432; }
+/* The current-lesson panel takes exactly the LEFT half of the radial row.
+ * Both areas are readable in portrait mode. The guide scrolls internally. */
+.guide-and-radial {
+  flex: none; height: 190px; padding: 7px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch; gap: 7px; overflow: hidden;
+}
+.guide-area {
+  min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  background: #f0f5fe; border-radius: 11px; padding: 10px;
+  scrollbar-width: thin;
+}
+.guide-heading { color: var(--navy); font-size: 15px; font-weight: 750; line-height: 1.2; margin-bottom: 7px; }
+.guide-body { white-space: pre-line; color: #465a76; font-size: 14px; line-height: 1.4; overflow-wrap: break-word; }
+.radial-area { display: flex; align-items: center; justify-content: center; overflow: hidden; min-width: 0; min-height: 0; }
+#radialSvg { display: block; width: 100%; height: 100%; }
+.ellipsis { font-size: 22px; font-weight: 650; line-height: 1; text-align: center; }
+.infinity-heading { text-align: center; }
+.radial-ring { fill: none; stroke: #d6e0ee; stroke-width: 1; stroke-dasharray: 2 4; }
+.radial-cross { stroke: #e6edf6; stroke-width: 1; }
+.ray { opacity: .45; stroke-width: 2; stroke-linecap: round; }
+.ray.newest { opacity: .95; stroke-width: 3.3; animation: rayIn .45s ease-out both; }
+.ray.winning-glow { stroke: #5ccf8a; opacity: .28; stroke-width: 9; }
+.ray.winning { stroke: #2ea669; opacity: .7; stroke-width: 3; }
+.ray-end { opacity: .55; }
+.move-marker { font-family: Arial, sans-serif; font-size: 17px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+.move-marker.newest { font-size: 20px; paint-order: stroke; stroke: white; stroke-width: 2px; }
+@keyframes rayIn { from { stroke-dasharray: 0 650; } to { stroke-dasharray: 650 0; } }
+.bottom-dock { flex: none; display: flex; flex-direction: column; gap: 7px; }
+.entry-panel { padding: 10px 12px 11px; }
+.entry-panel h2 { margin-bottom: 8px; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.field-grid label { display: block; min-height: 20px; color: var(--muted); font-size: 11px; line-height: 1.15; font-weight: 600; margin-bottom: 4px; }
+.digit-field { border: 1px solid #d3dfed; width: 100%; height: 41px; border-radius: 9px; padding: 0 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #f5f8fc; color: var(--navy); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.digit-field span { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.digit-field.repeating { background: #fff1b9; border-color: #eacb63; }
+.digit-field.selected { outline: 2px solid #4d8dec; outline-offset: 0; }
+.digit-field.repeating.selected { outline-color: #bf9224; }
+.keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 9px; }
+.keypad button { height: 43px; background: #eff4fa; border: 1px solid #dce4ef; border-radius: 9px; color: var(--navy); font-size: 21px; font-weight: 730; }
+.keypad .delete { font-size: 13px; }
+.keypad button:active { background: #d8e4f6; transform: translateY(1px); }
+.go { height: 40px; border: 0; border-radius: 9px; margin-top: 8px; width: 100%; background: #266dd8; color: #fff; font-weight: 800; font-size: 23px; text-align: center; line-height: 40px; padding: 0; }
+.go:active { background: #1759b9; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 6px 10px; }
+.message-stack { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.turn-status { color: var(--blue); font-size: 14px; font-weight: 750; }
+.turn-status.o { color: var(--red); }
+.turn-status.win { color: var(--green); }
+.threat-status { color: #8c6014; font-size: 11px; line-height: 1.2; }
+.error-status { color: #bc2542; font-size: 11px; line-height: 1.25; }
+.threat-status:empty, .error-status:empty { display: none; }
+.new-game { background: #eff4fb; color: var(--navy); border: 1px solid #dce4f0; border-radius: 9px; font-size: 13px; font-weight: 730; padding: 10px 12px; white-space: nowrap; }
+/* On phone-sized screens show BOTH the short radial summary and the history
+ * at once; the move history itself remains independently scrollable. */
+@media (max-height: 950px) {
+  .history-panel { height: 318px; }
+  .guide-and-radial { height: 190px; }
+}
+@media (max-height: 715px) {
+  .history-panel { height: 330px; }
+  .app { gap: 6px; }
+  .guide-and-radial { height: 190px; }
+  .entry-panel { padding-top: 7px; padding-bottom: 8px; }
+  .keypad { margin-top: 6px; }
+}
+@media (max-width: 375px) {
+  .guide-area { padding: 8px; }
+  .guide-heading { font-size: 14px; }
+  .guide-body { font-size: 13px; }
+  .app { padding-left: 7px; padding-right: 7px; }
+  h1 { font-size: 17px; }
+  .entry-panel { padding-left: 9px; padding-right: 9px; }
+  .field-grid label { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+</style>
 </head>
 <body>
   <main class="app" aria-label="Infinite-Dimensional Tic-Tac-Toe game">
@@ -24,9 +163,16 @@
         </div>
       </section>
 
-      <!-- Intentionally no title and no legend for the radial illustration. -->
-      <section class="panel radial-panel" aria-label="Abstract radial visualization of moves">
-        <svg id="radialSvg" viewBox="0 0 360 192" role="img" aria-label="Each move is a ray; X is blue and O is red. The mark's distance from center represents its repeating digit average."></svg>
+      <!-- Two equally sized panels share the old radial section's horizontal space.
+           The guide has NO permanent title; only its contextual lesson heading. -->
+      <section class="panel guide-and-radial" aria-label="Game guide and radial visualization">
+        <div class="guide-area" id="guideArea" aria-label="Contextual game instruction">
+          <div id="guideHeading" class="guide-heading">Welcome</div>
+          <div id="guideBody" class="guide-body">Every move uses infinitely repeating coordinates.</div>
+        </div>
+        <div class="radial-area">
+          <svg id="radialSvg" viewBox="0 0 200 200" role="img" aria-label="Decorative map of the played moves; it does not show exact board positions."></svg>
+        </div>
       </section>
     </div>
 
@@ -36,11 +182,11 @@
         <div class="field-grid">
           <div>
             <label for="whiteSelect">Initial Dimensions</label>
-            <button id="whiteSelect" type="button" class="digit-field" aria-pressed="false" aria-label="Select initial dimensions field"><span id="whiteValue">Tap to enter</span></button>
+            <button id="whiteSelect" type="button" class="digit-field selected" aria-pressed="true" aria-label="Select initial dimensions field"><span id="whiteValue">Tap to enter</span></button>
           </div>
           <div>
             <label for="yellowSelect">Infinite Repeating Dimensions</label>
-            <button id="yellowSelect" type="button" class="digit-field repeating selected" aria-pressed="true" aria-label="Select infinite repeating dimensions field"><span id="yellowValue">Tap to enter</span></button>
+            <button id="yellowSelect" type="button" class="digit-field repeating" aria-pressed="false" aria-label="Select infinite repeating dimensions field"><span id="yellowValue">Tap to enter</span></button>
           </div>
         </div>
         <div class="keypad" aria-label="Digit keypad">
@@ -62,6 +208,721 @@
       </footer>
     </div>
   </main>
-  <script type="module" src="./app.js"></script>
+  <script>
+/**
+ * Infinite-Dimensional Tic-Tac-Toe: exact, browser-only game engine.
+ *
+ * Coordinates are eventually periodic sequences of digits 1, 2 and 3.
+ * A position is stored as a canonical (prefix, cycle) pair, so different
+ * textual descriptions of the SAME infinite point are equal.
+ *
+ * All line and threat checks are mathematically exact. No finite cutoff
+ * is used to approximate the infinite board: after the longest prefix,
+ * one least-common-multiple repeat cycle proves the condition forever.
+ *
+ * This module deliberately does not know anything about HTML or browsers.
+ */
+
+const MAX_SHARED_PERIOD = 300;
+
+/** Parse keypad digits or comma-separated typed digits. */
+function parseDigits(input, required = false) {
+  const text = String(input ?? "").replace(/[\s,]/g, "");
+  if (!text) {
+    if (required) throw new Error("Enter at least one repeating digit.");
+    return "";
+  }
+  if (!/^[123]+$/.test(text)) throw new Error("Only digits 1, 2, and 3 are allowed.");
+  return text;
+}
+
+/** Compute the smallest repeated unit of a FINITE cycle. */
+function shortestPeriod(cycle) {
+  if (!cycle.length) throw new Error("A repeating pattern is required.");
+  for (let n = 1; n <= cycle.length; n++) {
+    if (cycle.length % n !== 0) continue;
+    const unit = cycle.slice(0, n);
+    if (unit.repeat(cycle.length / n) === cycle) return unit;
+  }
+  return cycle;
+}
+
+/**
+ * Move the repeat boundary left when possible, rotating the cycle so
+ * the INFINITE digit sequence does not change. This yields a unique
+ * minimal prefix and primitive cycle for each eventually periodic word.
+ */
+function canonicalPosition(prefixInput, cycleInput) {
+  let prefix = parseDigits(prefixInput);
+  let cycle = shortestPeriod(parseDigits(cycleInput, true));
+  while (prefix.length && prefix.at(-1) === cycle.at(-1)) {
+    prefix = prefix.slice(0, -1);
+    cycle = cycle.at(-1) + cycle.slice(0, -1);
+  }
+  return { prefix, cycle, key: `${prefix}|${cycle}` };
+}
+
+/** Return the coordinate in dimension (zero-based) without expansion. */
+function digitAt(position, dimension) {
+  if (!Number.isSafeInteger(dimension) || dimension < 0) throw new Error("Invalid dimension.");
+  return dimension < position.prefix.length
+    ? Number(position.prefix[dimension])
+    : Number(position.cycle[(dimension - position.prefix.length) % position.cycle.length]);
+}
+
+const gcd = (a, b) => { while (b) [a, b] = [b, a % b]; return a; };
+const lcm = (a, b) => (a / gcd(a, b)) * b;
+
+/** Shared prefix and shared period to display and test infinite positions. */
+function commonWidths(positions) {
+  if (!positions.length) return { white: 0, yellow: 0 };
+  return {
+    white: Math.max(...positions.map(p => p.prefix.length)),
+    yellow: positions.reduce((acc, p) => lcm(acc, p.cycle.length), 1)
+  };
+}
+
+/** Construct exactly enough digits for the shared visible columns. */
+/** Minimum FOUR visible repeating digits, always a whole number of cycles.
+ * The actual shared period still determines the 300-digit legality limit.
+ * Thus periods 1 -> 4, 2 -> 4, 3 -> 6, 5 -> 5.
+ */
+function displayYellowWidth(actualPeriod) {
+  if (!actualPeriod) return 0;
+  return actualPeriod * Math.max(1, Math.ceil(4 / actualPeriod));
+}
+
+function synchronizedDigits(position, white, yellow) {
+  const initial = [];
+  const repeating = [];
+  for (let i = 0; i < white; i++) initial.push(digitAt(position, i));
+  for (let i = white; i < white + yellow; i++) repeating.push(digitAt(position, i));
+  return { initial, repeating };
+}
+
+/** Is B the unique MIDPOINT between A and C in every dimension? */
+function lineWithMidpoint(a, b, c) {
+  const { white, yellow } = commonWidths([a, b, c]);
+  let changed = false;
+  for (let i = 0; i < white + yellow; i++) {
+    const x = digitAt(a, i), y = digitAt(b, i), z = digitAt(c, i);
+    if (x === y && y === z) continue;
+    if (!((x === 1 && y === 2 && z === 3) ||
+          (x === 3 && y === 2 && z === 1))) return false;
+    changed = true;
+  }
+  return changed;
+}
+
+/** Move order does NOT determine who is the midpoint. */
+function winningLine(a, b, c) {
+  return lineWithMidpoint(a, b, c) ||
+         lineWithMidpoint(b, a, c) ||
+         lineWithMidpoint(a, c, b);
+}
+
+/**
+ * Find all mathematical places that could complete two existing marks.
+ *
+ * Three possibilities, applied in the SAME role in EVERY dimension:
+ *  A midpoint: C=2A-B; B midpoint: C=2B-A; C midpoint: C=(A+B)/2.
+ * If any coordinate would be invalid, that entire proposed line fails.
+ * These positions remain internal: warning-only assistance must never
+ * reveal the completion coordinates to the players.
+ */
+function missingLinePositions(a, b) {
+  if (a.key === b.key) return [];
+  const { white, yellow } = commonWidths([a, b]);
+  const results = new Map();
+  for (const role of ["a", "b", "missing"]) {
+    let prefix = "", cycle = "", valid = true;
+    for (let i = 0; i < white + yellow; i++) {
+      const x = digitAt(a, i), y = digitAt(b, i);
+      const candidate = role === "a" ? 2 * x - y
+        : role === "b" ? 2 * y - x : (x + y) / 2;
+      if (!Number.isInteger(candidate) || candidate < 1 || candidate > 3) {
+        valid = false;
+        break;
+      }
+      if (i < white) prefix += candidate;
+      else cycle += candidate;
+    }
+    if (!valid) continue;
+    const position = canonicalPosition(prefix, cycle);
+    if (position.key !== a.key && position.key !== b.key) results.set(position.key, position);
+  }
+  return [...results.values()];
+}
+
+/**
+ * State machine for two people playing on ONE screen. No server, account,
+ * permanent storage or network requests. A page refresh starts a new game.
+ */
+class Game {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.moves = [];               // {player, position}
+    this.occupied = new Set();
+    this.winner = null;
+    this.winningIndices = [];
+    this.threats = { X: new Map(), O: new Map() };
+    this.threateningIndices = new Set();
+    this.previousThreatCounts = { X: 0, O: 0 }; // For blocked-threat guide message.
+  }
+
+  get nextPlayer() { return this.moves.length % 2 ? "O" : "X"; }
+  get widths() { return commonWidths(this.moves.map(m => m.position)); }
+  get threatCounts() { return { X: this.threats.X.size, O: this.threats.O.size }; }
+
+  play(white, yellow) {
+    if (this.winner) throw new Error("Game over. Start a new game to play again.");
+    const position = canonicalPosition(white, yellow);
+    if (this.occupied.has(position.key)) throw new Error("This infinite position is already occupied.");
+
+    // Keep the exact original limit: the LCM of ALL shared periods <= 300.
+    const nextPeriod = lcm(this.widths.yellow || 1, position.cycle.length);
+    if (nextPeriod > MAX_SHARED_PERIOD) {
+      throw new Error(`This move requires ${nextPeriod} shared repeating digits (maximum 300).`);
+    }
+
+    // Record the last threat totals BEFORE any game-state change.
+    this.previousThreatCounts = { ...this.threatCounts };
+
+    const player = this.nextPlayer;
+    const newIndex = this.moves.length;
+    const oldSamePlayer = [];
+    this.moves.forEach((move, i) => { if (move.player === player) oldSamePlayer.push(i); });
+    this.moves.push({ player, position });
+    this.occupied.add(position.key);
+
+    // A new win must contain the latest move; check same-player pairs.
+    outer: for (let i = 0; i < oldSamePlayer.length; i++) {
+      for (let j = i + 1; j < oldSamePlayer.length; j++) {
+        const a = oldSamePlayer[i], b = oldSamePlayer[j];
+        if (winningLine(this.moves[a].position, this.moves[b].position, position)) {
+          this.winner = player;
+          this.winningIndices = [a, b, newIndex];
+          break outer;
+        }
+      }
+    }
+
+    if (this.winner) {
+      this.threats = { X: new Map(), O: new Map() };
+      this.threateningIndices.clear();
+    } else this.recalculateThreats();
+    return newIndex;
+  }
+
+  /** Count DISTINCT empty winning squares for each player, not pairs. */
+  recalculateThreats() {
+    const threats = { X: new Map(), O: new Map() };
+    const rows = new Set();
+    for (const player of ["X", "O"]) {
+      const indices = this.moves.flatMap((m, i) => m.player === player ? [i] : []);
+      for (let i = 0; i < indices.length; i++) {
+        for (let j = i + 1; j < indices.length; j++) {
+          const first = indices[i], second = indices[j];
+          for (const missing of missingLinePositions(
+            this.moves[first].position, this.moves[second].position)) {
+            if (this.occupied.has(missing.key)) continue;
+            if (!threats[player].has(missing.key)) threats[player].set(missing.key, new Set());
+            threats[player].get(missing.key).add(first);
+            threats[player].get(missing.key).add(second);
+            rows.add(first);
+            rows.add(second);
+          }
+        }
+      }
+    }
+    this.threats = threats;
+    this.threateningIndices = rows;
+  }
+}
+
+/**
+ * Visual-only radial position. The cycle's average sets the radius;
+ * proportions of 1,2,3 give a composition direction.
+ * The small stable hash jitter is deliberately cosmetic, not a game rule.
+ */
+const anchors = { 1: 210, 2: 330, 3: 90 };
+const rad = degrees => degrees * Math.PI / 180;
+function stableHash01(text) {
+  // FNV-1a, stable across page reloads and browsers (not a security hash).
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 0xffffffff;
+}
+
+function radialSignature(position) {
+  const cycle = position.cycle;
+  const counts = [1, 2, 3].map(digit => [...cycle].filter(x => Number(x) === digit).length);
+  const proportions = counts.map(c => c / cycle.length);
+  const average = [...cycle].reduce((s, d) => s + Number(d), 0) / cycle.length;
+  const x = [1, 2, 3].reduce((s, d, i) => s + proportions[i] * Math.cos(rad(anchors[d])), 0);
+  const y = [1, 2, 3].reduce((s, d, i) => s + proportions[i] * Math.sin(rad(anchors[d])), 0);
+  const fraction = stableHash01(cycle);
+  const baseAngle = Math.hypot(x, y) < 1e-11 ? 360 * fraction : Math.atan2(y, x) * 180 / Math.PI;
+  return {
+    angle: (baseAngle + 10 * (2 * fraction - 1) + 360) % 360,
+    radiusFraction: (average - 1) / 2,
+    average,
+    proportions
+  };
+}
+
+/**
+ * Adaptive, warning-only learning guide. Lessons are about the rules and
+ * current conditions, NEVER about coordinates of empty winning squares.
+ * Priority: input errors > wins > threats/forks > blocked threat > early
+ * lessons > alternating mathematical reminders.
+ * The heading belongs to the current lesson, not an extra "Game Guide" title.
+ */
+const GUIDE_LESSONS = {
+  "1": {
+    "title": "Welcome",
+    "body": "Each move describes a position with infinitely many coordinates. Enter optional Initial Dimensions and a required repeating pattern using 1, 2, and 3. Tap Go to play X."
+  },
+  "2": {
+    "title": "Repeating forever",
+    "body": "X has placed the first mark. The yellow digits repeat forever, so the position has infinitely many coordinates. O, enter a different position."
+  },
+  "3": {
+    "title": "The objective",
+    "body": "You need three of your own marks on a single straight line in all dimensions. A line may increase in one dimension, decrease in another, and stay constant in others."
+  },
+  "4": {
+    "title": "Five allowed patterns",
+    "body": "In each dimension, the three values must be 1-2-3, 3-2-1, 1-1-1, 2-2-2, or 3-3-3. The rule must hold in every dimension."
+  },
+  "5": {
+    "title": "The midpoint rule",
+    "body": "The SAME move must be the midpoint across every changing dimension. A line can change direction between dimensions, but not which move occupies the middle."
+  },
+  "6": {
+    "title": "Checking a line",
+    "body": "Choose three marks of one player and try each as the midpoint. In every dimension, the other two digits must add up to twice the midpoint digit."
+  },
+  "7": {
+    "title": "Infinity matters",
+    "body": "Three marks might look aligned in the first few dimensions but disagree later. The same straight-line rule must continue through the entire infinite repeat."
+  },
+  "8": {
+    "title": "Order is irrelevant",
+    "body": "The midpoint is not necessarily the second mark played. It may be the first, second, or third chronologically. The computer checks all possible midpoints."
+  },
+  "9": {
+    "title": "Example: a winning line",
+    "body": "A general example of three positions that DO form a line:\n(1,3) repeating\n(2) repeating\n(3,1) repeating\nEach changing dimension has the SAME middle position: (2)."
+  },
+  "10": {
+    "title": "Example: not a line",
+    "body": "If one dimension is 1-2-3, but a second is 2-3-1 in the SAME move order, the midpoint changes. That is not a single straight line, even though both use 1, 2, 3."
+  },
+  "11": {
+    "title": "Constant coordinates",
+    "body": "Not every dimension needs to change. 1-2-3 can occur in one dimension while 2-2-2 stays unchanged in another. Both are compatible with a valid line."
+  },
+  "12": {
+    "title": "About the circle",
+    "body": "The radial graphic gives an impression of the game, not an exact board. Distance reflects the repeating digits' average; direction reflects their composition. Marks lining up visually does not prove a win."
+  },
+  "13": {
+    "title": "X has a threat",
+    "body": "X has two marks that could complete a winning line with one unoccupied position. Light-blue rows show the moves involved. O, think about preventing the completion."
+  },
+  "14": {
+    "title": "O has a threat",
+    "body": "O has an immediate winning opportunity. Light-red rows identify the two moves involved. X, consider whether the line can be blocked."
+  },
+  "15": {
+    "title": "Both players threaten",
+    "body": "Both X and O have potential winning lines. The player whose turn it is may be able to win now. Use the consistent-midpoint rule to study the colored rows."
+  },
+  "16": {
+    "title": "X creates a fork",
+    "body": "X has two or more DISTINCT winning positions. Blocking just one leaves another open. O should consider whether an immediate win is available instead."
+  },
+  "17": {
+    "title": "O creates a fork",
+    "body": "O has two or more DISTINCT winning positions. One blocking move cannot occupy both. X should consider whether an immediate win is available instead."
+  },
+  "18": {
+    "title": "A threat was blocked",
+    "body": "A previously available winning position has been occupied, so that particular threat is gone. Look for new lines with one consistent midpoint."
+  },
+  "19": {
+    "title": "Look for a pair",
+    "body": "Neither player currently has an immediate winning move. Look for two marks that might belong to a line with the same midpoint across every changing dimension."
+  },
+  "20": {
+    "title": "Think in dimensions",
+    "body": "There are no immediate winning moves now. Compare matching coordinate columns in Move History, including the infinite repeating section."
+  },
+  "21": {
+    "title": "X wins!",
+    "body": "Three X positions make a straight line across infinitely many dimensions. The same X position is the midpoint in every changing dimension. Winning rows are green."
+  },
+  "22": {
+    "title": "O wins!",
+    "body": "Three O positions make a straight line across infinitely many dimensions. The same O position is the midpoint in every changing dimension. Winning rows are green."
+  },
+  "23": {
+    "title": "Occupied position",
+    "body": "That infinite position has already been played. Different typed sequences can describe exactly the same square. Try a different move; it is still your turn."
+  },
+  "24": {
+    "title": "Repeating digits required",
+    "body": "Every move needs at least one repeating digit. Tap Infinite Repeating Dimensions and enter 1, 2, or 3. The initial section may be empty."
+  },
+  "25": {
+    "title": "Repeating period too long",
+    "body": "This move would require more than 300 synchronized repeating digits. Try a pattern with a shorter compatible period. It is still your turn."
+  }
+};
+
+function chooseGuideLesson(game, errorMessage = "") {
+  let lesson;
+  if (errorMessage) {
+    const message = errorMessage.toLowerCase();
+    if (message.includes("already occupied")) lesson = 23;
+    else if (message.includes("at least one repeating")) lesson = 24;
+    else if (message.includes("maximum 300") || message.includes("shared repeating digits")) lesson = 25;
+    else return { number: 0, title: "Input not accepted", body: `${errorMessage} Correct the entry and try again. Your turn has not changed.` };
+  } else if (game.winner) {
+    lesson = game.winner === "X" ? 21 : 22;
+  } else {
+    const { X: x, O: o } = game.threatCounts;
+    if (x && o) lesson = 15;
+    else if (x >= 2) lesson = 16;
+    else if (o >= 2) lesson = 17;
+    else if (x) lesson = 13;
+    else if (o) lesson = 14;
+    else if (["X", "O"].some(p => game.previousThreatCounts[p] > game.threatCounts[p])) lesson = 18;
+    else {
+      const n = game.moves.length;
+      lesson = n <= 11 ? n + 1 : (n % 2 === 0 ? 19 : 20);
+    }
+  }
+  return { number: lesson, ...GUIDE_LESSONS[lesson] };
+}
+
+/** Arrange markers, with very small cosmetic nudges to avoid collisions. */
+function radialGeometry(moves, radius = 83) {
+  const points = [];
+  const xy = (a, r) => ({ x: r * Math.cos(rad(a)), y: -r * Math.sin(rad(a)) });
+  for (const [index, move] of moves.entries()) {
+    const signature = radialSignature(move.position);
+    let angle = signature.angle, distance = signature.radiusFraction * radius;
+    if (distance < .01 && points.some(p => p.displayDistance < 10)) {
+      angle = (angle + index * 137.507764) % 360;
+      distance = Math.min(8, radius * .045);
+    }
+    const gap = (pt) => Math.min(1e8, ...points.map(p => Math.hypot(pt.x - p.x, pt.y - p.y)));
+    let point = xy(angle, distance);
+    if (gap(point) < 17) {
+      const candidates = [];
+      for (const da of [0, 3, -3, 6, -6, 9, -9]) {
+        for (const dr of [0, 3, -3, 6, -6]) {
+          const r = Math.max(0, Math.min(radius, distance + dr));
+          const a = angle + da;
+          const pt = xy(a, r);
+          candidates.push({ a, r, pt, gap: gap(pt), cost: Math.abs(da) + Math.abs(dr) * 1.5 });
+        }
+      }
+      // Collision-free first; otherwise maximum clearance; then smallest nudge.
+      candidates.sort((a, b) =>
+        Number(b.gap >= 17) - Number(a.gap >= 17) ||
+        b.gap - a.gap || a.cost - b.cost
+      );
+      angle = candidates[0].a;
+      distance = candidates[0].r;
+      point = candidates[0].pt;
+    }
+    const endpoint = xy(angle, radius);
+    points.push({ index, player: move.player, ...point, endpoint, angle,
+      displayDistance: distance, ...signature });
+  }
+  return points;
+}
+
+/**
+ * Infinite-Dimensional Tic-Tac-Toe: browser UI.
+ *
+ * This reproduces the two-person, one-device Pyto experience using only
+ * standard HTML, CSS and SVG. No libraries, online accounts, or server calls.
+ * The exact game rules are imported from engine.js.
+ */
+const game = new Game();
+let initialEntry = "";
+let repeatingEntry = "";
+let activeField = "white"; // Start with initial dimensions; yellow is still required before Go.
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  history: $("historyTable"),
+  historyScroller: $("historyScroller"),
+  graph: $("radialSvg"),
+  white: $("whiteSelect"), yellow: $("yellowSelect"),
+  whiteValue: $("whiteValue"), yellowValue: $("yellowValue"),
+  go: $("goButton"), delete: $("deleteBtn"),
+  status: $("turnStatus"), threats: $("threatStatus"), error: $("errorStatus"),
+  reset: $("newGameBtn"), upperScroll: $("upperScroll"),
+  guideHeading: $("guideHeading"), guideBody: $("guideBody"), guideArea: $("guideArea")
+};
+
+function make(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+function selectField(which) {
+  activeField = which;
+  updateEntries();
+}
+
+function updateEntries() {
+  els.white.classList.toggle("selected", activeField === "white");
+  els.yellow.classList.toggle("selected", activeField === "yellow");
+  els.white.setAttribute("aria-pressed", String(activeField === "white"));
+  els.yellow.setAttribute("aria-pressed", String(activeField === "yellow"));
+  els.whiteValue.textContent = initialEntry ? initialEntry.split("").join(",") : "Tap to enter";
+  els.yellowValue.textContent = repeatingEntry ? repeatingEntry.split("").join(",") : "Tap to enter";
+  // No native text inputs: pressing the keypad NEVER opens a phone keyboard.
+  els.go.disabled = Boolean(game.winner);
+  els.delete.disabled = Boolean(game.winner);
+  document.querySelectorAll("[data-digit]").forEach(button => { button.disabled = Boolean(game.winner); });
+}
+
+function showError(message = "") {
+  els.error.textContent = message;
+  renderGuide(message);
+}
+
+function addDigit(digit) {
+  if (game.winner) return;
+  if (activeField === "white") initialEntry += digit;
+  else repeatingEntry += digit;
+  showError();
+  updateEntries();
+}
+
+function deleteDigit() {
+  if (game.winner) return;
+  if (activeField === "white") initialEntry = initialEntry.slice(0, -1);
+  else repeatingEntry = repeatingEntry.slice(0, -1);
+  showError();
+  updateEntries();
+}
+
+function submit() {
+  try {
+    game.play(initialEntry, repeatingEntry);
+    initialEntry = "";
+    repeatingEntry = "";
+    activeField = "white";
+    showError();
+    renderAll({ scrollLatest: true });
+  } catch (error) {
+    // An invalid submission does not change turns or move history.
+    showError(error.message);
+  }
+}
+
+function resetGame() {
+  game.reset();
+  initialEntry = "";
+  repeatingEntry = "";
+  activeField = "white";
+  showError();
+  renderAll();
+  els.historyScroller.scrollLeft = 0;
+  els.historyScroller.scrollTop = 0;
+  els.upperScroll.scrollTop = 0;
+}
+
+/**
+ * A common CSS grid makes the infinite dimensions comparable vertically.
+ * Each numbered coordinate is an INDIVIDUAL fixed-width cell, with cool
+ * initial cells and warm repeating cells. The columns realign whenever a
+ * new move increases the shared prefix or repeating period.
+ */
+function renderHistory(scrollLatest = false) {
+  const scrollLeft = els.historyScroller.scrollLeft;
+  const scrollTop = els.historyScroller.scrollTop;
+  els.history.replaceChildren();
+
+  if (!game.moves.length) {
+    els.history.append(make("div", "empty-history", "No moves yet. Enter repeating digits to begin."));
+    return;
+  }
+
+  const { white, yellow: actualPeriod } = game.widths;
+  const yellow = displayYellowWidth(actualPeriod);
+  // Each history row receives a final ellipsis cell OUTSIDE the repeat.
+  const template = `29px 34px ${Array(white + yellow).fill("28px").join(" ")} 22px`.trim();
+  const makeRow = (className) => {
+    const row = make("div", `history-grid-row ${className}`);
+    row.style.setProperty("--grid-cols", template);
+    els.history.append(row);
+    return row;
+  };
+
+  // Keep the column headings precise. When a range is only 1–2 cells wide,
+  // use a compact abbreviation rather than letting long text overlap.
+  const header = makeRow("heading");
+  header.append(make("div", "smallheading", "#"));
+  header.append(make("div", "smallheading", "X/O"));
+  if (white) {
+    const full = `Dimensions 1–${white}`;
+    const h = make("div", "range white", white < 4 ? `D1–${white}` : full);
+    h.style.gridColumn = `3 / span ${white}`;
+    h.title = full;
+    header.append(h);
+  }
+  const yellowTitle = `Dimensions ${white + 1}–∞`;
+  const repeatHeading = make("div", "range yellow", yellow < 5 ? `D${white + 1}–∞` : yellowTitle);
+  repeatHeading.title = `${yellowTitle}, period ${yellow}`;
+  repeatHeading.style.gridColumn = `${3 + white} / span ${yellow}`;
+  header.append(repeatHeading);
+  header.append(make("div", "smallheading infinity-heading", "∞"));
+
+  for (const [i, move] of game.moves.entries()) {
+    const classes = game.winningIndices.includes(i) ? "winning" :
+      game.threateningIndices.has(i) ? `threat-${move.player.toLowerCase()}` : "";
+    const row = makeRow(classes);
+    row.setAttribute("aria-label", `Move ${i + 1}, ${move.player}${classes ? ", " + classes : ""}`);
+    row.append(make("div", "move-number", `${i + 1}.`));
+    row.append(make("div", `move-player ${move.player.toLowerCase()}`, move.player));
+    const digits = synchronizedDigits(move.position, white, yellow);
+    digits.initial.forEach(digit => row.append(make("div", "coord", String(digit))));
+    digits.repeating.forEach((digit, j) => row.append(make("div", `coord repeating${j === 0 ? " first-repeat" : ""}`, String(digit))));
+    row.append(make("div", "ellipsis", "…"));
+  }
+
+  // Preserve the user's horizontal view when a row is appended. Scroll to
+  // the latest row if a move was just played, but not on ordinary refresh.
+  els.historyScroller.scrollLeft = scrollLeft;
+  els.historyScroller.scrollTop = scrollLatest ? els.historyScroller.scrollHeight : scrollTop;
+}
+
+/** SVG drawing helpers. SVG gives crisp circles/rays on phones and desktops. */
+const svgNS = "http://www.w3.org/2000/svg";
+function svgNode(name, attrs = {}) {
+  const node = document.createElementNS(svgNS, name);
+  Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
+  return node;
+}
+
+/**
+ * This is an abstract artistic summary, NOT an exact board projection.
+ * The repeating cycle's mean sets the mark's distance, and 1/2/3 digit
+ * composition sets the ray angle. A deterministic ±10° jitter and tiny
+ * nudges distinguish otherwise overlapping marks.
+ *
+ * Never draw ghost winning squares: the selected help mode is warning-only.
+ */
+function renderRadial() {
+  const svg = els.graph;
+  svg.replaceChildren();
+  const cx = 100, cy = 100, radius = 78;
+
+  for (const r of [radius / 3, radius * 2 / 3, radius]) {
+    svg.append(svgNode("circle", { cx, cy, r, class: "radial-ring" }));
+  }
+  svg.append(svgNode("line", { x1: cx - radius, y1: cy, x2: cx + radius, y2: cy, class: "radial-cross" }));
+  svg.append(svgNode("line", { x1: cx, y1: cy - radius, x2: cx, y2: cy + radius, class: "radial-cross" }));
+
+  const marks = radialGeometry(game.moves, radius);
+  marks.forEach((m, i) => {
+    const x = cx + m.x, y = cy + m.y;
+    const endx = cx + m.endpoint.x, endy = cy + m.endpoint.y;
+    const color = m.player === "X" ? "#236bd8" : "#d7394d";
+    const newest = i === game.moves.length - 1;
+    const winning = game.winningIndices.includes(i);
+    if (winning) {
+      svg.append(svgNode("line", { x1: cx, y1: cy, x2: endx, y2: endy, class: "ray winning-glow" }));
+      svg.append(svgNode("line", { x1: cx, y1: cy, x2: endx, y2: endy, class: "ray winning" }));
+    }
+    svg.append(svgNode("line", { x1: cx, y1: cy, x2: endx, y2: endy, stroke: color,
+      class: `ray${newest ? " newest" : ""}` }));
+    svg.append(svgNode("circle", { cx: endx, cy: endy, r: newest ? 3 : 2, fill: color, class: "ray-end" }));
+
+    if (winning) svg.append(svgNode("circle", { cx: x, cy: y, r: 13, fill: "#e5faeb",
+      stroke: "#30aa68", "stroke-width": 2, opacity: .95 }));
+    else if (newest) svg.append(svgNode("circle", { cx: x, cy: y, r: 12, fill: "white", opacity: .8 }));
+
+    const text = svgNode("text", { x, y: y + .3, fill: color, class: `move-marker${newest ? " newest" : ""}` });
+    text.textContent = m.player;
+    svg.append(text);
+  });
+}
+
+/** The guide updates after each accepted move and any rejected submission.
+ * It explains exact mathematical rules but never reveals threat coordinates.
+ */
+function renderGuide(errorMessage = "") {
+  const lesson = chooseGuideLesson(game, errorMessage);
+  const oldNumber = els.guideArea.dataset.lesson;
+  els.guideHeading.textContent = lesson.title;
+  els.guideBody.textContent = lesson.body;
+  els.guideArea.dataset.lesson = String(lesson.number);
+  // New lesson begins at the top; resizing/layout never changes game rules.
+  if (oldNumber !== String(lesson.number)) els.guideArea.scrollTop = 0;
+}
+
+function renderStatus() {
+  const player = game.nextPlayer;
+  if (game.winner) {
+    els.status.textContent = `${game.winner} wins! Moves ${game.winningIndices.map(i => i + 1).join(", ")}.`;
+    els.status.className = "turn-status win";
+    els.threats.textContent = "";
+  } else {
+    els.status.textContent = `${player} to move`;
+    els.status.className = `turn-status ${player.toLowerCase()}`;
+    const counts = game.threatCounts;
+    const warnings = ["X", "O"].filter(p => counts[p] > 0).map(p => {
+      const count = counts[p];
+      return `${p}: ${count} threat${count === 1 ? "" : "s"}${count > 1 ? " (fork)" : ""}`;
+    });
+    els.threats.textContent = warnings.join(" · ");
+  }
+}
+
+function renderAll({ scrollLatest = false } = {}) {
+  renderHistory(scrollLatest);
+  renderRadial();
+  renderStatus();
+  renderGuide(els.error.textContent);
+  updateEntries();
+}
+
+// Clicking a display chooses the digit destination, but never opens a keyboard.
+els.white.addEventListener("click", () => selectField("white"));
+els.yellow.addEventListener("click", () => selectField("yellow"));
+document.querySelectorAll("[data-digit]").forEach(button =>
+  button.addEventListener("click", () => addDigit(button.dataset.digit)));
+els.delete.addEventListener("click", deleteDigit);
+els.go.addEventListener("click", submit);
+els.reset.addEventListener("click", resetGame);
+
+// Desktop players can optionally use 1/2/3, Backspace and Enter as shortcuts.
+// This is additive; touch controls remain the primary iPhone interface.
+document.addEventListener("keydown", event => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.target.closest("button")) return;
+  if (["1", "2", "3"].includes(event.key)) addDigit(event.key);
+  else if (event.key === "Backspace") { event.preventDefault(); deleteDigit(); }
+  else if (event.key === "Enter") submit();
+});
+
+renderAll();
+
+</script>
 </body>
 </html>
