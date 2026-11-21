@@ -149,6 +149,7 @@ function browserApp() {
   const svgNS = "http://www.w3.org/2000/svg";
   const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const shaCache = new Map();
+  // Web adaptation of Pyto v6: continuous SVG tapered rays, stronger front/back contrast, and four-layer sphere rendering.
 
   function node(tag, cls, content) {
     const n=document.createElement(tag);
@@ -476,6 +477,42 @@ function browserApp() {
     });
     return result;
   }
+
+  // Web equivalent of Pyto v6's four layers and continuous Pillow rays:
+  // A single closed SVG silhouette uses a longitudinal alpha gradient,
+  // instead of dozens of overlapping circular dots.
+  function sphereArc(svg,cx,cy,r,front) {
+    const pi=Math.PI;
+    function curve(which,value) {
+      const d=[];
+      const steps=96;
+      let active=false;
+      for(let i=0;i<=steps;i++) {
+        const angle=2*pi*i/steps;
+        const visible=(which==="latitude"?Math.sin(angle)>=0:Math.cos(angle)>=0);
+        if(visible!==front) {active=false;continue;}
+        let x,y;
+        if(which==="latitude") {
+          const rx=r*Math.sqrt(1-value*value)*.92;
+          const ry=r*(value===0?.21:.16);
+          x=cx+rx*Math.cos(angle);y=cy+r*value+ry*Math.sin(angle);
+        } else {
+          x=cx+r*value*Math.cos(angle);y=cy+r*.96*Math.sin(angle);
+        }
+        if(Math.hypot(x-cx,y-cy)>r-.7) {active=false;continue;}
+        d.push((active?"L":"M")+x.toFixed(2)+" "+y.toFixed(2));
+        active=true;
+      }
+      if(d.length) svg.append(svgNode("path",{
+        d:d.join(" "),fill:"none",stroke:"#5684c2",
+        "stroke-width":front?.92:.70,
+        "stroke-dasharray":front?"1.0 3.3":"1.0 5.0",
+        "stroke-opacity":front?.26:.12
+      }));
+    }
+    for(const lat of [-.39,0,.39])curve("latitude",lat);
+    for(const factor of [.40,.72])curve("meridian",factor);
+  }
   function drawSphereBase(svg,cx,cy,r) {
     const defs=svgNode("defs");
     const gradient=svgNode("radialGradient",{id:"sphereGradient",cx:"34%",cy:"23%",r:"85%"});
@@ -484,19 +521,11 @@ function browserApp() {
     gradient.append(svgNode("stop",{offset:"100%","stop-color":"#d7e8ff","stop-opacity":.86}));
     defs.append(gradient);svg.append(defs);
     svg.append(svgNode("ellipse",{cx,cy:cy+r+3,rx:r*.52,ry:2.3,fill:"#425b7f",opacity:.10}));
-    svg.append(svgNode("circle",{cx,cy,r,fill:"url(#sphereGradient)",stroke:"#8bb1db","stroke-opacity":.6,"stroke-width":1}));
-    svg.append(svgNode("ellipse",{cx:cx-r*.30,cy:cy-r*.38,rx:r*.16,ry:r*.11,fill:"white",opacity:.29}));
-    // Dotted rear curves and slightly stronger front arcs approximate Pyto's
-    // stationary glass globe without requiring WebGL or image assets.
-    for(const v of [-.39,0,.39]) {
-      const xRad=r*Math.sqrt(1-v*v)*.92, yRad=r*(v===0?.21:.16);
-      svg.append(svgNode("ellipse",{cx,cy:cy+r*v,rx:xRad,ry:yRad,fill:"none",
-        stroke:"#6c93c6","stroke-width":.75,"stroke-dasharray":"2.3 3.4",opacity:.29}));
-    }
-    for(const f of [.40,.72]) {
-      svg.append(svgNode("ellipse",{cx,cy,rx:r*f,ry:r*.96,fill:"none",
-        stroke:"#6c93c6","stroke-width":.7,"stroke-dasharray":"2.3 3.4",opacity:.30}));
-    }
+    svg.append(svgNode("circle",{cx,cy,r,fill:"url(#sphereGradient)",stroke:"#8bb1db",
+      "stroke-opacity":.6,"stroke-width":1}));
+    svg.append(svgNode("ellipse",{cx:cx-r*.30,cy:cy-r*.38,
+      rx:r*.16,ry:r*.11,fill:"white",opacity:.29}));
+    sphereArc(svg,cx,cy,r,false);
     svg.append(svgNode("circle",{cx,cy,r:2.2,fill:"#7e97bc",opacity:.5}));
   }
   function drawSphereMarker(svg,x,y,point,newest,winning) {
@@ -514,32 +543,48 @@ function browserApp() {
       "stroke-opacity":.28+.7*front,"stroke-width":.75+.3*front}));
     svg.append(svgNode("text",{x,y:y+.3,fill:rgb,opacity:alpha,
       "font-size":10.7+3.7*front,"font-weight":700,
-      "font-family":"Arial, sans-serif",
-      "text-anchor":"middle","dominant-baseline":"central"},point.player));
+      "font-family":"Arial, sans-serif","text-anchor":"middle",
+      "dominant-baseline":"central"},point.player));
   }
-  function drawSphereRay(svg,cx,cy,x,y,point,winning,overlap) {
+  function rayDepthProfile(depth) {
+    const front=clamp((depth+1)/2,0,1);
+    return {startW:2.15,tipW:.90+3.55*front,
+      startA:.42+.18*front,tipA:.23+.73*front};
+  }
+  function rayShape(cx,cy,x,y,startW,tipW,extra=0) {
     const dx=x-cx,dy=y-cy,dist=Math.hypot(dx,dy);
-    if(dist<.8) return;
-    const front=(point.depth+1)/2;
-    const steps=Math.max(4,Math.floor(dist/2.15));
-    const tipWidth=1.05+3.05*front, tipOpacity=.19+.75*front;
+    if(dist<.8)return "";
+    const nx=-dy/dist,ny=dx/dist,positive=[],negative=[];
+    for(let i=0;i<19;i++){
+      const t=i/18, px=cx+dx*t,py=cy+dy*t;
+      const half=(startW+(tipW-startW)*t+extra)/2;
+      positive.push([px+nx*half,py+ny*half]);
+      negative.push([px-nx*half,py-ny*half]);
+    }
+    const points=positive.concat(negative.reverse());
+    return "M"+points.map(p=>p[0].toFixed(3)+","+p[1].toFixed(3)).join(" L")+" Z";
+  }
+  function drawSphereRay(svg,cx,cy,x,y,point,winning,rayId) {
+    if(Math.hypot(x-cx,y-cy)<.8)return;
+    const {startW,tipW,startA,tipA}=rayDepthProfile(point.depth);
     const color=point.player==="X"?"#1e66da":"#d9323d";
-    for(let i=1;i<=steps;i++) {
-      const t=i/steps;
-      const px=cx+dx*t,py=cy+dy*t;
-      const width=2.45+(tipWidth-2.45)*t;
-      const opacity=.57+(tipOpacity-.57)*t;
-      if(winning) svg.append(svgNode("circle",{cx:px,cy:py,r:(width+1.8)/2,
-        fill:"#28bb66","fill-opacity":.12+.10*front}));
-      svg.append(svgNode("circle",{cx:px,cy:py,r:width/2,
-        fill:color,"fill-opacity":opacity}));
-    }
-    if(overlap) {
-      const ox=x-dx/dist*Math.min(12,dist);
-      const oy=y-dy/dist*Math.min(12,dist);
-      svg.append(svgNode("line",{x1:ox,y1:oy,x2:x,y2:y,stroke:color,
-        "stroke-opacity":.61,"stroke-width":1.3,"stroke-linecap":"round"}));
-    }
+    const gradId="ray-"+rayId;
+    const gradient=svgNode("linearGradient",{
+      id:gradId,gradientUnits:"userSpaceOnUse",x1:cx,y1:cy,x2:x,y2:y
+    });
+    gradient.append(svgNode("stop",{offset:"0%","stop-color":color,"stop-opacity":startA}));
+    gradient.append(svgNode("stop",{offset:"100%","stop-color":color,"stop-opacity":tipA}));
+    const defs=svgNode("defs");defs.append(gradient);svg.append(defs);
+    if(winning)svg.append(svgNode("path",{
+      d:rayShape(cx,cy,x,y,startW,tipW,2.1),
+      fill:"#21b15f","fill-opacity":.22
+    }));
+    svg.append(svgNode("path",{
+      d:rayShape(cx,cy,x,y,startW,tipW),
+      fill:"url(#"+gradId+")"
+    }));
+    // For a receding ray the marker was already drawn. The taper ends
+    // precisely at the marker's center and is painted over its X/O.
   }
   let animationId=0;
   async function renderSphere(animate=false) {
@@ -559,21 +604,30 @@ function browserApp() {
     function frame(progress) {
       if(epoch!==graphicEpoch || mode!=="inf") return;
       svg.replaceChildren();
+      // Strict draw order matches Pyto v6: back hemisphere, distant moves,
+      // foreground grid, then near moves. Within each band sort by depth.
       drawSphereBase(svg,cx,cy,r);
-      for(const p of sorted) {
-        const current=p.index===newest;
-        const q=current?progress:1;
-        if(q<=0) continue;
-        const x=cx+p.x*q,y=cy+p.y*q;
-        const win=winners.has(p.index);
-        if(p.depth<-.15) {
-          drawSphereMarker(svg,x,y,p,current,win);
-          drawSphereRay(svg,cx,cy,x,y,p,win,true);
-        } else {
-          drawSphereRay(svg,cx,cy,x,y,p,win,false);
-          drawSphereMarker(svg,x,y,p,current,win);
+      const back=sorted.filter(p=>p.depth<-.15);
+      const front=sorted.filter(p=>p.depth>=-.15);
+      function paint(points,behind) {
+        for(const p of points) {
+          const current=p.index===newest;
+          const q=current?progress:1;
+          if(q<=0)continue;
+          const x=cx+p.x*q,y=cy+p.y*q;
+          const win=winners.has(p.index);
+          if(behind){
+            drawSphereMarker(svg,x,y,p,current,win);
+            drawSphereRay(svg,cx,cy,x,y,p,win,"back-"+p.index);
+          } else {
+            drawSphereRay(svg,cx,cy,x,y,p,win,"front-"+p.index);
+            drawSphereMarker(svg,x,y,p,current,win);
+          }
         }
       }
+      paint(back,true);
+      sphereArc(svg,cx,cy,r,true);
+      paint(front,false);
     }
     if(animate && !reducedMotion) {
       const id=++animationId, start=performance.now();
