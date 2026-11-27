@@ -119,3 +119,6 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
   .go-button {height:31px;margin-top:4px;font-size:20px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Keep the reserved 4D visualization area plain. */
+#reserved4DGuideSpace {background:transparent}
