@@ -169,28 +169,29 @@ function browserApp() {
     renderGuide();
   }
   function placeGuideForMode(which,guide,historyScroll) {
-    // Preserve the guide's original grid cell in 4D, reserving it for
-    // a future visualization. Keep the same live guide nodes and IDs.
+    // Keep the original graphic grid cell reserved in 4D mode.
+    // The live instructions are the last item in the history scroller.
+    const heading=guide.querySelector(".guide-heading");
     if(which==="4d") {
-      if(guide.parentElement===historyScroll.parentElement) return;
+      if(guide.parentElement===historyScroll) return;
       const reserved=document.createElement("div");
       reserved.className="guide-area";
       reserved.id="reserved4DGuideSpace";
       reserved.setAttribute("aria-hidden","true");
       guide.replaceWith(reserved);
-      historyScroll.parentElement.append(guide);
-      // A fixed footer within the existing history panel; the move list
-      // continues to scroll independently above it.
-      guide.style.flex="0 0 auto";
-      guide.style.maxHeight="42%";
-      guide.style.marginTop="6px";
+      historyScroll.append(guide);
+      guide.style.background="transparent";
+      guide.style.overflow="visible";
+      guide.style.padding="0 7px 10px";
+      heading.style.marginBottom="0";
     } else {
       const reserved=document.getElementById("reserved4DGuideSpace");
       if(!reserved) return;
       reserved.replaceWith(guide);
-      guide.style.removeProperty("flex");
-      guide.style.removeProperty("max-height");
-      guide.style.removeProperty("margin-top");
+      guide.style.removeProperty("background");
+      guide.style.removeProperty("overflow");
+      guide.style.removeProperty("padding");
+      heading.style.removeProperty("margin-bottom");
     }
     guide.scrollTop=0;
   }
