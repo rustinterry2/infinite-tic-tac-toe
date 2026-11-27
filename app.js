@@ -345,6 +345,83 @@ function browserApp() {
       ui.guideArea.scrollTop=0;
     }
   }
+  function render3DCube(svg, moves, winningIndices, selected) {
+    // Orthographic projection of a 3 × 3 × 3 cube. The three axes
+    // have equal projected scale order, but intentionally different slopes
+    // so marks inside the cube remain distinguishable on a small screen.
+    const project=(x,y,z)=>[78+24*x-16*y,75+3*x+7*y-24*z];
+    const center=position=>project(...position.map(v=>v-.5));
+    function line(a,b,attrs={}) {
+      svg.append(svgNode("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],
+        "stroke-linecap":"round",...attrs}));
+    }
+    function face(corners,attrs) {
+      svg.append(svgNode("polygon",{points:corners.map(p=>project(...p).join(",")).join(" "),...attrs}));
+    }
+
+    // Lightly tint the three visible faces; interior marks remain visible.
+    face([[0,0,3],[3,0,3],[3,3,3],[0,3,3]],{fill:"#e5eef9","fill-opacity":".42"});
+    face([[0,3,0],[3,3,0],[3,3,3],[0,3,3]],{fill:"#dce8f7","fill-opacity":".22"});
+    face([[3,0,0],[3,3,0],[3,3,3],[3,0,3]],{fill:"#cbdcf2","fill-opacity":".26"});
+
+    // Each axis has sixteen parallel gridlines. Draw interior lines first,
+    // then surface divisions, then the twelve strong exterior edges.
+    const grid=[];
+    for(let axis=0;axis<3;axis++) {
+      const others=[0,1,2].filter(i=>i!==axis);
+      for(let a=0;a<=3;a++) for(let b=0;b<=3;b++) {
+        const start=[0,0,0], end=[0,0,0];
+        start[others[0]]=end[others[0]]=a;
+        start[others[1]]=end[others[1]]=b;
+        end[axis]=3;
+        const boundary=Number(a===0||a===3)+Number(b===0||b===3);
+        grid.push({start,end,boundary});
+      }
+    }
+    grid.sort((a,b)=>a.boundary-b.boundary);
+    for(const {start,end,boundary} of grid) {
+      line(project(...start),project(...end),{
+        stroke:boundary===2?"#647b99":"#8c9fb5",
+        "stroke-width":boundary===2?1.05:.65,
+        "stroke-opacity":boundary===2?.9:boundary===1?.48:.23
+      });
+    }
+
+    const winners=winningIndices.map(i=>moves[i]).filter(Boolean);
+    const winning=new Set(winners.map(m=>m.position.join("")));
+    // Highlight a complete keypad selection without revealing any threats.
+    if(selected && /^[123]{3}$/.test(selected)) {
+      const [x,y]=center([...selected].map(Number));
+      svg.append(svgNode("circle",{cx:x,cy:y,r:5.6,fill:"#d7e9ff",
+        "fill-opacity":".9",stroke:"#1e66da","stroke-width":".9"}));
+    }
+
+    // The engine supplies one winning triple, which need not be in spatial
+    // order. Connect its farthest endpoints so the line passes through all
+    // three marks even when the last move occupies the middle square.
+    if(winners.length===3) {
+      let endpoints=[], longest=-1;
+      for(let i=0;i<3;i++) for(let j=i+1;j<3;j++) {
+        const d=winners[i].position.reduce((sum,v,k)=>sum+(v-winners[j].position[k])**2,0);
+        if(d>longest) {longest=d;endpoints=[winners[i],winners[j]];}
+      }
+      line(center(endpoints[0].position),center(endpoints[1].position),
+        {stroke:"#229957","stroke-width":2.5,"stroke-opacity":".92"});
+    }
+
+    // Upright, high-contrast glyphs stay readable through the wireframe.
+    for(const move of moves) {
+      const [x,y]=center(move.position), won=winning.has(move.position.join(""));
+      if(won) svg.append(svgNode("circle",{cx:x,cy:y,r:5.6,fill:"#d5f7dc",
+        stroke:"#229957","stroke-width":".8"}));
+      svg.append(svgNode("text",{x,y,"text-anchor":"middle","dominant-baseline":"central",
+        "font-family":"Arial, sans-serif","font-size":10.5,"font-weight":"700",
+        fill:move.player==="X"?"#1e66da":"#d9323d",
+        stroke:"#ffffff","stroke-width":1.4,"stroke-linejoin":"round",
+        "paint-order":"stroke fill"},move.player));
+    }
+  }
+
   function renderFiniteBoard() {
     const svg=ui.graphic, width=180, height=172, dims=game.dimensions;
     svg.replaceChildren();
@@ -387,7 +464,9 @@ function browserApp() {
     if(dims===2) {
       board((width-side)/2,(height-side)/2);
     } else if(dims===3) {
-      const g=5, total=3*side+2*g, x0=(width-total)/2,y0=(height-side)/2+7;
+      // Keep the existing board size; reserve the upper part for the cube.
+      const g=5, total=3*side+2*g, x0=(width-total)/2,y0=height-side-3;
+      render3DCube(svg,game.moves,game.winningIndices,selected);
       for(let third=1;third<=3;third++) {
         const x=x0+(third-1)*(side+g);
         text(x+side/2,y0-7,third,10);
