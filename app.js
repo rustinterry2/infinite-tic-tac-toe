@@ -458,15 +458,16 @@ function browserApp() {
   }
 
   function projectTesseract(position,phase=0) {
-    // Three values on each of four equal axes; w controls the apparent
-    // size of the nested cubes via genuine 4D perspective projection.
+    // Continuous rotation through four-dimensional space. The initial
+    // view remains close to the original nested-cube orientation.
     let [x,y,z,w]=position.map(v=>v-2);
     const rotate=(a,b,t)=>[a*Math.cos(t)-b*Math.sin(t),a*Math.sin(t)+b*Math.cos(t)];
-    [x,w]=rotate(x,w,.16+.20*Math.sin(phase));
-    [z,w]=rotate(z,w,.11+.15*Math.sin(phase*.73+.8));
-    [y,w]=rotate(y,w,.07+.11*Math.sin(phase*.57+1.2));
-    const factor=3.3/(3.3-w);
-    // Fixed oblique view of the resulting three-dimensional coordinates.
+    [x,w]=rotate(x,w,.16+phase);
+    [z,w]=rotate(z,w,.11+.43*phase);
+    [y,w]=rotate(y,w,.07+.27*phase);
+    // Slightly increase perspective distance to keep every possible
+    // rotated position (including marker padding) inside the fixed SVG.
+    const factor=3.6/(3.6-w);
     return [90+factor*(29*x-15*y),86+factor*(4*x+9*y-31*z)];
   }
 
@@ -535,7 +536,7 @@ function browserApp() {
       svg.style.cssText="display:block;width:100%;height:100%;max-width:180px;max-height:172px";
       host.append(svg);
     }
-    const phase=reducedMotion?0:(now-tesseractStarted)/2250;
+    const phase=reducedMotion?0:(now-tesseractStarted)/1900;
     drawTesseract(svg,game.moves,game.winningIndices,whiteEntry,phase);
   }
 
