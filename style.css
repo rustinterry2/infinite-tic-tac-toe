@@ -8,7 +8,7 @@
 * {box-sizing:border-box}
 html,body {margin:0;height:100%;overflow:hidden}
 body {background:var(--backdrop);color:var(--navy)}
-button {font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button {font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 button:disabled {cursor:not-allowed}
 button:focus-visible,.history-scroller:focus-visible {outline:3px solid #7da8ee;outline-offset:1px}
 [hidden] {display:none!important}
