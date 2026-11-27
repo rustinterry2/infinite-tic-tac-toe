@@ -18,7 +18,7 @@ button:focus-visible,.history-scroller:focus-visible {outline:3px solid #7da8ee;
   padding:max(8px,env(safe-area-inset-top)) 11px max(7px,env(safe-area-inset-bottom));
   display:flex;flex-direction:column;gap:8px;min-height:450px;
 }
-.app-header {flex:none;display:flex;align-items:center;min-height:42px;padding:0 2px}
+.app-header {display:flex;align-items:center;padding:2px 4px 10px}
 h1 {font-size:clamp(19px,5.1vw,23px);font-weight:760;letter-spacing:-.45px;line-height:1.15;margin:0}
 h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
 .panel {border:1px solid var(--edge);border-radius:14px;background:#fff}
@@ -32,7 +32,7 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
 .history-scroller {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .history-table {min-width:100%;width:max-content}
 .history-grid-row {display:grid;align-items:center;gap:3px;padding:5px 5px;min-height:38px;width:max-content;min-width:100%}
-.history-grid-row.heading {min-height:42px;position:sticky;top:0;z-index:2;background:white}
+.history-grid-row.heading {min-height:42px;background:white}
 .smallheading {font-size:11px;color:var(--muted);font-weight:750}
 .history-range {color:var(--muted);font-size:11px;font-weight:750;white-space:nowrap;padding:2px 0}
 .history-range.repeating-heading {background:#fff0b0}
@@ -64,7 +64,6 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
 #gameSvg {display:block;width:100%;height:100%;max-width:180px;max-height:172px}
 .bottom-dock {flex:none}
 .entry-panel {padding:8px 11px 10px}
-.entry-panel h2 {font-size:20px;margin-bottom:8px}
 .field-grid {display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .field-grid.finite {grid-template-columns:1fr}
 .field-heading {display:flex;align-items:center;justify-content:space-between;min-height:19px;gap:7px}
@@ -76,16 +75,15 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
 .digit-field.selected {border-color:var(--blue)}
 .digit-field.repeating {background:var(--warm)}
-.keypad {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}
+.keypad {display:grid;grid-template-columns:minmax(0,1.35fr) repeat(3,minmax(0,1fr)) minmax(0,1.35fr);gap:6px;margin-top:8px}
 .keypad button {height:43px;border-radius:9px;border:1px solid var(--edge);
   background:var(--cool);font-size:19px;color:var(--navy)}
 .keypad #deleteBtn {font-size:15px}
-.go-button {display:block;width:100%;margin-top:9px;height:39px;border-radius:9px;border:none;
-  background:#2c67d9;color:white;font-weight:750;font-size:24px}
-.go-button:disabled {background:#c2cddd;color:#607189}
+.keypad .go-button {display:block;width:100%;min-width:0;border:none;
+  background:#2c67d9;color:white;font-weight:750;font-size:20px}
+.keypad .go-button:disabled {background:#c2cddd;color:#607189}
 @media(max-height:730px){
   .app {gap:6px}
-  .app-header {min-height:35px}
   .mode-bar {height:46px}
   .guide-and-radial {height:172px}
   .entry-panel {padding:6px 9px 8px}
@@ -96,12 +94,13 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
   h1 {font-size:19px}
   .field-heading label {font-size:10px}
   .mode-bar button {font-size:15px}
+  .keypad {gap:4px}
+  .keypad #deleteBtn {font-size:13px}
   .guide-and-radial .guide-body {font-size:11px;line-height:1.25}
   .guide-and-radial .guide-heading {font-size:12px}
 }
 @media(max-height:560px){
   .app {min-height:0;gap:4px}
-  .app-header {min-height:26px}
   .mode-bar {height:38px;padding:3px}
   .upper {gap:4px}
   .history-panel {padding:4px 6px}
@@ -111,12 +110,10 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
   .guide-and-radial .guide-heading {font-size:11px;margin-bottom:2px}
   .guide-and-radial .guide-body {font-size:10px;line-height:1.2}
   .entry-panel {padding:4px 8px}
-  .entry-panel h2 {font-size:16px;margin-bottom:3px}
   .field-heading {min-height:15px}
   .digit-field {height:32px}
   .keypad {margin-top:4px}
   .keypad button {height:31px}
-  .go-button {height:31px;margin-top:4px;font-size:20px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
