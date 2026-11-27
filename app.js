@@ -203,6 +203,9 @@ function browserApp() {
     stopTesseractAnimation();
     stopDekeractAnimation();
     mode=which;
+    const titles={"2d":"Two Dimensional Tic-Tac-Toe","3d":"Three Dimensional Tic-Tac-Toe","4d":"Four Dimensional Tic-Tac-Toe",inf:"Infinite Dimensional Tic-Tac-Toe"};
+    ui.title.textContent=titles[which];
+    document.title=titles[which];
     dekeractStarted=performance.now();
     tesseractStarted=performance.now();
     placeGuideForMode(which,ui.guideArea,ui.historyScroll);
