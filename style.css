@@ -50,6 +50,8 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
 .empty-history {padding:19px 6px;color:var(--muted);font-size:13px}
 .history-status {padding:12px 7px 10px;min-width:max-content}
 .turn-status {font-size:14px;color:var(--blue);font-weight:750}
+.turn-status.x {color:var(--blue)}
+.turn-status.o {color:var(--red)}
 .turn-status.win {color:var(--green)}
 .threat-status {font-size:12px;color:#9a631f;margin-top:5px}
 .error-status {font-size:12px;color:#bf2337;margin-top:5px}
