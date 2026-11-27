@@ -11,7 +11,6 @@
 </head>
 <body>
 <main class="app">
-  <header class="app-header"><h1 id="gameTitle">Infinite Dimensional Tic-Tac-Toe</h1></header>
   <nav class="mode-bar panel" id="modeBar" aria-label="Start a game in a selected dimension">
     <button type="button" data-mode="2d">2D</button>
     <button type="button" data-mode="3d">3D</button>
@@ -20,8 +19,9 @@
   </nav>
   <div class="upper" id="upperScroll">
     <section class="panel history-panel" aria-label="Move history">
-      <h2>Move history</h2>
       <div class="history-scroller" id="historyScroller" tabindex="0" aria-label="Scrollable move history">
+        <header class="app-header"><h1 id="gameTitle">Infinite Dimensional Tic-Tac-Toe</h1></header>
+        <h2>Move history</h2>
         <div class="history-table" id="historyTable"></div>
         <div class="history-status" aria-live="polite">
           <div id="turnStatus" class="turn-status">X to move</div>
@@ -42,14 +42,13 @@
   </div>
   <div class="bottom-dock">
     <section class="panel entry-panel" aria-label="Enter move using the coordinate keypad">
-      <h2>Enter move</h2>
       <div class="field-grid finite" id="fieldGrid">
         <div class="field-group">
           <div class="field-heading">
             <label id="whiteCaption" for="whiteSelect">1st and 2nd Dimensions</label>
             <span id="coordCount" class="coordinate-count">0 of 2</span>
           </div>
-          <button type="button" id="whiteSelect" class="digit-field selected" aria-pressed="true"><span id="whiteValue">Use the keypad below</span></button>
+          <button type="button" id="whiteSelect" class="digit-field selected" aria-pressed="true"><span id="whiteValue">Enter move</span></button>
         </div>
         <div class="field-group" id="yellowGroup" hidden>
           <div class="field-heading"><label for="yellowSelect">Infinite Repeating Dimensions</label></div>
@@ -57,12 +56,12 @@
         </div>
       </div>
       <div class="keypad" role="group" aria-label="Coordinate keypad">
+        <button type="button" id="deleteBtn">Delete</button>
         <button type="button" data-digit="1">1</button>
         <button type="button" data-digit="2">2</button>
         <button type="button" data-digit="3">3</button>
-        <button type="button" id="deleteBtn">Delete</button>
+        <button type="button" id="goButton" class="go-button" disabled>Go</button>
       </div>
-      <button type="button" id="goButton" class="go-button" disabled>Go</button>
     </section>
   </div>
 </main>
