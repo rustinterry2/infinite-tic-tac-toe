@@ -143,6 +143,7 @@ function browserApp() {
     go:$("goButton"), del:$("deleteBtn")
   };
   let mode = "2d";
+  let tesseractFrame=null, tesseractStarted=0;
   let game = new FiniteGame(2);
   let whiteEntry = "", yellowEntry = "", activeField = "white", currentError = "";
   let previousThreatCounts = {X:0,O:0}, graphicEpoch = 0;
@@ -198,7 +199,9 @@ function browserApp() {
 
   function switchMode(which) {
     if(!["2d","3d","4d","inf"].includes(which)) return;
+    stopTesseractAnimation();
     mode=which;
+    tesseractStarted=performance.now();
     placeGuideForMode(which,ui.guideArea,ui.historyScroll);
     game = which==="inf" ? new Game() : new FiniteGame(Number(which[0]));
     whiteEntry=""; yellowEntry=""; activeField=which==="inf"?"yellow":"white";
@@ -449,6 +452,104 @@ function browserApp() {
         stroke:"#ffffff","stroke-width":1.4,"stroke-linejoin":"round",
         "paint-order":"stroke fill"},move.player));
     }
+  }
+
+  function projectTesseract(position,phase=0) {
+    // Three values on each of four equal axes; w controls the apparent
+    // size of the nested cubes via genuine 4D perspective projection.
+    let [x,y,z,w]=position.map(v=>v-2);
+    const rotate=(a,b,t)=>[a*Math.cos(t)-b*Math.sin(t),a*Math.sin(t)+b*Math.cos(t)];
+    [x,w]=rotate(x,w,.16+.20*Math.sin(phase));
+    [z,w]=rotate(z,w,.11+.15*Math.sin(phase*.73+.8));
+    [y,w]=rotate(y,w,.07+.11*Math.sin(phase*.57+1.2));
+    const factor=3.3/(3.3-w);
+    // Fixed oblique view of the resulting three-dimensional coordinates.
+    return [90+factor*(29*x-15*y),86+factor*(4*x+9*y-31*z)];
+  }
+
+  function drawTesseract(svg,moves,winningIndices,selected,phase=0) {
+    svg.replaceChildren();
+    const project=p=>projectTesseract(p,phase);
+    const line=(a,b,attrs)=>{const [x1,y1]=project(a),[x2,y2]=project(b);
+      svg.append(svgNode("line",{x1,y1,x2,y2,"stroke-linecap":"round",...attrs}));};
+    // All 108 straight lattice lines (each covers three playable cells).
+    // Cube skeletons for w=1,2,3 and the eight corner connectors are
+    // stronger; internal gridlines are deliberately subdued.
+    const lines=[];
+    for(let axis=0;axis<4;axis++){
+      const other=[0,1,2,3].filter(k=>k!==axis);
+      for(let i=1;i<=3;i++)for(let j=1;j<=3;j++)for(let k=1;k<=3;k++){
+        const a=[1,1,1,1];[a[other[0]],a[other[1]],a[other[2]]]=[i,j,k];
+        const b=a.slice();b[axis]=3;
+        const strong=axis===3?other.every(d=>a[d]!==2):other.filter(d=>d!==3).every(d=>a[d]!==2);
+        lines.push({a,b,axis,strong});
+      }
+    }
+    lines.sort((a,b)=>Number(a.strong)-Number(b.strong));
+    for(const l of lines){
+      line(l.a,l.b,{stroke:l.axis===3?"#8875ad":"#647b99",
+        "stroke-width":l.strong?1.05:.46,
+        "stroke-opacity":l.strong?(l.axis===3?.65:.77):.14});
+    }
+    const winners=winningIndices.map(i=>moves[i]).filter(Boolean);
+    const winning=new Set(winners.map(m=>m.position.join("")));
+    if(winners.length===3){
+      let max=-1,ends=[];
+      for(let i=0;i<3;i++)for(let j=i+1;j<3;j++){
+        const d=winners[i].position.reduce((s,v,k)=>s+(v-winners[j].position[k])**2,0);
+        if(d>max){max=d;ends=[winners[i],winners[j]];}
+      }
+      line(ends[0].position,ends[1].position,{stroke:"#229957","stroke-width":2.5,"stroke-opacity":.95});
+    }
+    if(selected&&/^[123]{4}$/.test(selected)){
+      const [cx,cy]=project([...selected].map(Number));
+      svg.append(svgNode("circle",{cx,cy,r:4.9,fill:"#d7e9ff",stroke:"#1e66da","stroke-width":".8"}));
+    }
+    // Prioritize the most recent moves and winning marks when projections
+    // overlap. The nine flat boards remain the unambiguous playing view.
+    const ordered=moves.slice().sort((a,b)=>Number(winning.has(a.position.join("")))-Number(winning.has(b.position.join(""))));
+    for(const m of ordered){
+      const [x,y]=project(m.position),won=winning.has(m.position.join(""));
+      if(won)svg.append(svgNode("circle",{cx:x,cy:y,r:5.1,fill:"#d5f7dc",stroke:"#229957","stroke-width":".75"}));
+      svg.append(svgNode("text",{x,y,"text-anchor":"middle","dominant-baseline":"central",
+        "font-family":"Arial, sans-serif","font-weight":"700","font-size":9.5,
+        fill:m.player==="X"?"#1e66da":"#d9323d",stroke:"#fff","stroke-width":1.3,
+        "stroke-linejoin":"round","paint-order":"stroke fill"},m.player));
+    }
+  }
+
+  function render4DTesseract(now=performance.now()) {
+    const host=document.getElementById("reserved4DGuideSpace");
+    if(mode!=="4d"||!host)return;
+    let svg=host.querySelector("svg");
+    if(!svg){
+      host.removeAttribute("aria-hidden");
+      host.style.padding="0";
+      host.style.display="flex";
+      host.style.alignItems="center";
+      host.style.justifyContent="center";
+      svg=svgNode("svg",{viewBox:"0 0 180 172",role:"img","aria-label":"Four-dimensional nested cube game diagram"});
+      svg.style.cssText="display:block;width:100%;height:100%;max-width:180px;max-height:172px";
+      host.append(svg);
+    }
+    const phase=reducedMotion?0:(now-tesseractStarted)/9000;
+    drawTesseract(svg,game.moves,game.winningIndices,whiteEntry,phase);
+  }
+
+  function stopTesseractAnimation(){
+    if(tesseractFrame!==null)cancelAnimationFrame(tesseractFrame);
+    tesseractFrame=null;
+  }
+
+  function startTesseractAnimation(){
+    if(reducedMotion||tesseractFrame!==null)return;
+    let last=0;
+    const tick=now=>{
+      if(mode!=="4d"){tesseractFrame=null;return;}
+      if(now-last>=50){render4DTesseract(now);last=now;}
+      tesseractFrame=requestAnimationFrame(tick);
+    };
+    tesseractFrame=requestAnimationFrame(tick);
   }
 
   function renderFiniteBoard() {
@@ -753,6 +854,7 @@ function browserApp() {
     else {
       graphicEpoch++;
       renderFiniteBoard();
+      if(mode==="4d"){render4DTesseract();startTesseractAnimation();}
     }
   }
   function renderAll(scrollLatest=false,animate=false) {
