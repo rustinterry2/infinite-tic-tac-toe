@@ -290,7 +290,9 @@ function browserApp() {
     const finite=mode!=="inf";
     const widths=game.widths;
     const count=finite?game.dimensions:widths.white+widths.yellow;
-    const columns=["24px","36px",...Array.from({length:Math.max(1,count)},()=> "27px")].join(" ");
+    // Reserve an explicit final column for the infinite continuation marker.
+    // Without it CSS grid auto-places the ellipsis on a second row.
+    const columns=["24px","36px",...Array.from({length:Math.max(1,count)},()=> "27px"),...(!finite?["24px"]:[])].join(" ");
     function row(kind) {
       const el=node("div",`history-grid-row ${kind}`);
       el.style.gridTemplateColumns=columns;
