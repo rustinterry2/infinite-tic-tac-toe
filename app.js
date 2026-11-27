@@ -1,4 +1,4 @@
-import { Game, synchronizedDigits } from "./engine.js";
+import { Game, synchronizedDigits, digitAt } from "./engine.js";
 
 function browserApp() {
   "use strict";
@@ -127,7 +127,7 @@ function browserApp() {
     ["Example: a winning line","A general example of three positions that DO form a line:\n(1,3) repeating\n(2) repeating\n(3,1) repeating\nEach changing dimension has the SAME middle position: (2)."],
     ["Example: not a line","If one dimension is 1-2-3, but a second is 2-3-1 in the SAME move order, the midpoint changes. That is not a single straight line, even though both use 1, 2, 3."],
     ["Constant coordinates","Not every dimension needs to change. 1-2-3 can occur in one dimension while 2-2-2 stays unchanged in another. Both are compatible with a valid line."],
-    ["About the sphere","The sphere is a visual impression, not an exact map of the infinite board. Distance reflects repeating digits' average; direction their composition. Fading and thickness suggest depth from digit order. Visual alignment does not prove a winning line."]
+    ["About the dekeract","The rotating 10D cube projects your first ten coordinates. Moves that differ only beyond dimension ten can overlap; × shows their count. Visual alignment alone does not prove a win. The game checks every infinite dimension."]
   ];
 
   const $ = id => document.getElementById(id);
@@ -144,6 +144,7 @@ function browserApp() {
   };
   let mode = "2d";
   let tesseractFrame=null, tesseractStarted=0;
+  let dekeractFrame=null, dekeractStarted=0;
   let game = new FiniteGame(2);
   let whiteEntry = "", yellowEntry = "", activeField = "white", currentError = "";
   let previousThreatCounts = {X:0,O:0}, graphicEpoch = 0;
@@ -200,7 +201,9 @@ function browserApp() {
   function switchMode(which) {
     if(!["2d","3d","4d","inf"].includes(which)) return;
     stopTesseractAnimation();
+    stopDekeractAnimation();
     mode=which;
+    dekeractStarted=performance.now();
     tesseractStarted=performance.now();
     placeGuideForMode(which,ui.guideArea,ui.historyScroll);
     game = which==="inf" ? new Game() : new FiniteGame(Number(which[0]));
@@ -853,8 +856,124 @@ function browserApp() {
       requestAnimationFrame(tick);
     } else frame(1);
   }
+  function makeDekeractBasis(phase) {
+    // Two orthonormal screen axes in R^10. Rotating the basis is equivalent
+    // to rotating the entire hypercube before its orthographic projection.
+    const u=Array.from({length:10},(_,i)=>Math.cos(Math.PI*i/10)/Math.sqrt(5));
+    const v=Array.from({length:10},(_,i)=>Math.sin(Math.PI*i/10)/Math.sqrt(5));
+    function spin(i,j,angle){
+      const c=Math.cos(angle),s=Math.sin(angle);
+      for(const row of [u,v]){
+        const a=row[i],b=row[j];row[i]=a*c-b*s;row[j]=a*s+b*c;
+      }
+    }
+    for(let i=0;i<5;i++)spin(i,i+5,phase*(.71+.19*i));
+    for(let i=0;i<5;i++)spin(2*i,(2*i+3)%10,phase*(.29+.08*i));
+    return [u,v];
+  }
+
+  function projectDekeract(coords,basis){
+    let x=0,y=0;
+    for(let i=0;i<10;i++){x+=coords[i]*basis[0][i];y+=coords[i]*basis[1][i];}
+    // Norm <= sqrt(10); marker-safe radius <= 75.9 within 180 x 172.
+    return [90+24*x,86+24*y];
+  }
+
+  function drawDekeract(svg,moves,winningIndices,phase=0){
+    const basis=makeDekeractBasis(phase);
+    const project=p=>projectDekeract(p,basis);
+    const node=(tag,attrs,value)=>svgNode(tag,attrs,value);
+    svg.replaceChildren();
+    svg.setAttribute("aria-label","Rotating ten-dimensional hypercube; first ten coordinates of infinite-dimensional moves");
+    // All 1024 vertices and 5120 edges. Bundle edges by axis into ten
+    // paths instead of making thousands of DOM nodes per animation frame.
+    const vertices=Array.from({length:1024},(_,n)=>project(Array.from({length:10},(_,i)=>n&(1<<i)?1:-1)));
+    const colors=["#526f9c","#7563a0","#497f9c","#6589ac","#8475a9"];
+    const fmt=n=>n.toFixed(1);
+    for(let d=0;d<10;d++){
+      const bit=1<<d,parts=[];
+      for(let i=0;i<1024;i++)if(!(i&bit)){
+        const a=vertices[i],b=vertices[i|bit];
+        parts.push(`M${fmt(a[0])} ${fmt(a[1])}L${fmt(b[0])} ${fmt(b[1])}`);
+      }
+      svg.append(node("path",{d:parts.join(""),fill:"none",stroke:colors[d%colors.length],
+        "stroke-width":".46","stroke-opacity":".12","stroke-linecap":"round"}));
+    }
+    // The first ten digits are exactly sampled from the engine's canonical
+    // prefix and repeating cycle. No approximation is used to decide wins.
+    const winning=new Set(winningIndices);
+    const groups=new Map();
+    const projected=moves.map((m,i)=>{
+      const coords=Array.from({length:10},(_,d)=>digitAt(m.position,d)-2);
+      const key=coords.join(",");
+      if(!groups.has(key))groups.set(key,{coords,members:[]});
+      const entry={m,i,coords,key};groups.get(key).members.push(entry);
+      return entry;
+    });
+    const winners=winningIndices.map(i=>projected[i]).filter(Boolean);
+    if(winners.length===3){
+      let farthest=-1,ends=[];
+      for(let i=0;i<3;i++)for(let j=i+1;j<3;j++){
+        const a=winners[i].coords,b=winners[j].coords;
+        const d=a.reduce((s,x,k)=>s+(x-b[k])**2,0);
+        if(d>farthest){farthest=d;ends=[a,b];}
+      }
+      const a=project(ends[0]),b=project(ends[1]);
+      // A legitimate infinite-dimensional win may collapse to a single
+      // point if its changing coordinates occur only beyond dimension ten.
+      if(Math.hypot(b[0]-a[0],b[1]-a[1])>.5)
+        svg.append(node("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"#229957",
+          "stroke-width":2.6,"stroke-linecap":"round","stroke-opacity":".96"}));
+    }
+    // Distinct infinite coordinates can have identical first ten digits.
+    // Keep their exact shared location and mark multiplicity rather than
+    // inventing an offset that would misrepresent the geometry.
+    const ordered=[...groups.values()].sort((a,b)=>Number(a.members.some(e=>winning.has(e.i)))-Number(b.members.some(e=>winning.has(e.i))));
+    for(const g of ordered){
+      const [x,y]=project(g.coords);
+      const won=g.members.some(e=>winning.has(e.i));
+      const xs=g.members.filter(e=>e.m.player==="X").length,os=g.members.length-xs;
+      const latest=g.members[g.members.length-1].m.player;
+      const group=node("g",{"aria-label":`${xs} X and ${os} O at this ten-dimensional position`});
+      group.append(node("title",{},`${xs} X, ${os} O; first ten coordinates: ${g.coords.map(d=>d+2).join(",")}`));
+      if(won)group.append(node("circle",{cx:x,cy:y,r:7.2,fill:"#d5f7dc",stroke:"#229957","stroke-width":1.1}));
+      else if(g.members.length>1)group.append(node("circle",{cx:x,cy:y,r:6.7,fill:"#fff",stroke:"#8c9fb5","stroke-width":".8"}));
+      const label=xs&&os?"X/O":latest;
+      if(xs&&os){
+        const t=node("text",{x,y,"text-anchor":"middle","dominant-baseline":"central","font-family":"Arial, sans-serif","font-size":8.6,"font-weight":"700",stroke:"#fff","stroke-width":1.4,"paint-order":"stroke fill"});
+        t.append(node("tspan",{fill:"#1e66da"},"X"),node("tspan",{fill:"#607189"},"/"),node("tspan",{fill:"#d9323d"},"O"));
+        group.append(t);
+      }else group.append(node("text",{x,y,"text-anchor":"middle","dominant-baseline":"central",
+        "font-family":"Arial, sans-serif","font-size":12,"font-weight":"700",
+        fill:latest==="X"?"#1e66da":"#d9323d",stroke:"#fff","stroke-width":1.7,"paint-order":"stroke fill"},label));
+      if(g.members.length>1)group.append(node("text",{x,y:y+9,"text-anchor":"middle","font-family":"Arial, sans-serif","font-size":7.5,"font-weight":"700",fill:"#40546f",stroke:"#fff","stroke-width":1.1,"paint-order":"stroke fill"},`×${g.members.length}`));
+      svg.append(group);
+    }
+  }
+
+  function renderDekeract(now=performance.now()){
+    if(mode!=="inf")return;
+    drawDekeract(ui.graphic,game.moves,game.winningIndices,reducedMotion?0:(now-dekeractStarted)/2100);
+  }
+
+  function stopDekeractAnimation(){
+    if(dekeractFrame!==null)cancelAnimationFrame(dekeractFrame);
+    dekeractFrame=null;
+  }
+
+  function startDekeractAnimation(){
+    if(reducedMotion||dekeractFrame!==null)return;
+    let last=0;
+    const tick=now=>{
+      if(mode!=="inf"){dekeractFrame=null;return;}
+      if(now-last>=66){renderDekeract(now);last=now;}
+      dekeractFrame=requestAnimationFrame(tick);
+    };
+    dekeractFrame=requestAnimationFrame(tick);
+  }
+
   function renderGraphic(animate=false) {
-    if(mode==="inf") renderSphere(animate);
+    if(mode==="inf"){renderDekeract();startDekeractAnimation();}
     else {
       graphicEpoch++;
       renderFiniteBoard();
