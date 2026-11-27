@@ -262,8 +262,11 @@ function browserApp() {
     ui.count.hidden=!finite;
     ui.count.textContent=finite?`${whiteEntry.length} of ${game.dimensions}`:"";
     const preview=(s,defaultText="Tap to enter")=>s ? (s.length>9?"…":"")+s.slice(-9).split("").join(",") : defaultText;
-    ui.whiteValue.textContent=preview(whiteEntry,finite?"Use the keypad below":"Tap to enter");
-    ui.yellowValue.textContent=preview(yellowEntry);
+    // The active empty field carries the prompt instead of a separate heading.
+    // Infinite-D retains its two independently selectable coordinate fields.
+    const initialPrompt=!whiteEntry&&!yellowEntry;
+    ui.whiteValue.textContent=preview(whiteEntry,finite||(initialPrompt&&activeField==="white")?"Enter move":"Tap to enter");
+    ui.yellowValue.textContent=preview(yellowEntry,initialPrompt&&activeField==="yellow"?"Enter move":"Tap to enter");
     ui.whiteBox.classList.toggle("selected",finite || activeField==="white");
     ui.yellowBox.classList.toggle("selected",activeField==="yellow");
     ui.whiteBox.setAttribute("aria-pressed",String(finite || activeField==="white"));
