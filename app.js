@@ -168,9 +168,37 @@ function browserApp() {
     ui.errors.textContent=message;
     renderGuide();
   }
+  function placeGuideForMode(which,guide,historyScroll) {
+    // Preserve the guide's original grid cell in 4D, reserving it for
+    // a future visualization. Keep the same live guide nodes and IDs.
+    if(which==="4d") {
+      if(guide.parentElement===historyScroll.parentElement) return;
+      const reserved=document.createElement("div");
+      reserved.className="guide-area";
+      reserved.id="reserved4DGuideSpace";
+      reserved.setAttribute("aria-hidden","true");
+      guide.replaceWith(reserved);
+      historyScroll.parentElement.append(guide);
+      // A fixed footer within the existing history panel; the move list
+      // continues to scroll independently above it.
+      guide.style.flex="0 0 auto";
+      guide.style.maxHeight="42%";
+      guide.style.marginTop="6px";
+    } else {
+      const reserved=document.getElementById("reserved4DGuideSpace");
+      if(!reserved) return;
+      reserved.replaceWith(guide);
+      guide.style.removeProperty("flex");
+      guide.style.removeProperty("max-height");
+      guide.style.removeProperty("margin-top");
+    }
+    guide.scrollTop=0;
+  }
+
   function switchMode(which) {
     if(!["2d","3d","4d","inf"].includes(which)) return;
     mode=which;
+    placeGuideForMode(which,ui.guideArea,ui.historyScroll);
     game = which==="inf" ? new Game() : new FiniteGame(Number(which[0]));
     whiteEntry=""; yellowEntry=""; activeField=which==="inf"?"yellow":"white";
     previousThreatCounts={X:0,O:0};
