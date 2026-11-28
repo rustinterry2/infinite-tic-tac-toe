@@ -442,8 +442,8 @@ function browserApp() {
     // Highlight a complete keypad selection without revealing any threats.
     if(selected && /^[123]{3}$/.test(selected)) {
       const [x,y]=center([...selected].map(Number));
-      svg.append(svgNode("circle",{cx:x,cy:y,r:5.6,fill:"#d7e9ff",
-        "fill-opacity":".9",stroke:"#1e66da","stroke-width":".9"}));
+      svg.append(svgNode("circle",{cx:x,cy:y,r:5.6,fill:game.nextPlayer==="O"?"#ffe4e7":"#d7e9ff",
+        "fill-opacity":".9",stroke:game.nextPlayer==="O"?"#d9323d":"#1e66da","stroke-width":".9"}));
     }
 
     // The engine supplies one winning triple, which need not be in spatial
@@ -522,7 +522,7 @@ function browserApp() {
     }
     if(selected&&/^[123]{4}$/.test(selected)){
       const [cx,cy]=project([...selected].map(Number));
-      svg.append(svgNode("circle",{cx,cy,r:4.9,fill:"#d7e9ff",stroke:"#1e66da","stroke-width":".8"}));
+      svg.append(svgNode("circle",{cx,cy,r:4.9,fill:game.nextPlayer==="O"?"#ffe4e7":"#d7e9ff",stroke:game.nextPlayer==="O"?"#d9323d":"#1e66da","stroke-width":".8"}));
     }
     // Prioritize the most recent moves and winning marks when projections
     // overlap. The nine flat boards remain the unambiguous playing view.
