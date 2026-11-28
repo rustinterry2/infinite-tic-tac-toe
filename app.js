@@ -102,15 +102,15 @@ function browserApp() {
       ["Eight possible lines","There are 3 rows, 3 columns and 2 diagonals. Every line follows the same coordinate pattern: stay fixed or go 1,2,3."]
     ],
     3:[
-      ["Add a third dimension","Now there are THREE ordinary tic-tac-toe boards. Enter three digits using the keypad. The 3rd coordinate picks board 1, 2, or 3."],
-      ["Read all three digits","The 1st coordinate is the column, the 2nd is the row, and the 3rd is the board number. (2,3,1) means column 2, row 3 on board 1."],
+      ["Add a third dimension","Now there are THREE ordinary tic-tac-toe boards. Enter three digits: board number (1–3), column, then row."],
+      ["Read all three digits","The 1st coordinate picks the board, the 2nd picks its column, and the 3rd picks its row. (2,3,1) means board 2, column 3, row 1."],
       ["Win between boards","Lines on one board still count. New lines can also pass through multiple boards, one square on each board."],
       ["A three-dimensional diagonal","(1,1,1), (2,2,2), (3,3,3) is a winning line. Every coordinate goes 1,2,3, just as in 2D."]
     ],
     4:[
-      ["Add a fourth dimension","Now THREE groups of THREE boards make nine small boards in a 3×3 arrangement. That gives 81 possible squares."],
-      ["Find the board by coordinates","The 1st digit is the square column; 2nd is its row. The 3rd digit picks the board COLUMN, and the 4th digit picks the board ROW."],
-      ["Four digits identify one square","(2,3,1,2) means column 2, row 3 on the board in column 1 and row 2 of the nine-board arrangement. Enter all four digits, then press Go."],
+      ["Add a fourth dimension","Nine small boards form a 3×3 arrangement. Enter four digits: board column, board row, square column, then square row."],
+      ["Find the board by coordinates","The 1st digit picks the board COLUMN; the 2nd picks the board ROW. The 3rd digit picks the square column and the 4th picks the square row."],
+      ["Four digits identify one square","(2,3,1,2) means square column 1, row 2 on the board in column 2 and row 3 of the nine-board arrangement. Enter all four digits, then press Go."],
       ["A four-dimensional diagonal","(1,1,1,1), (2,2,2,2), (3,3,3,3) form a line spanning three boards. New dimensions add ways to make lines."],
       ["The rule never changes","In EVERY dimension, a winning line either stays fixed, goes 1,2,3, or goes 3,2,1. Infinite-D extends this same idea to endless coordinates."]
     ]
@@ -395,12 +395,26 @@ function browserApp() {
       ui.guideArea.scrollTop=0;
     }
   }
+  function flatCoordinates(dims,column,row,boardColumn=1,boardRow=1) {
+    if(dims===3)return [boardColumn,column,row];
+    if(dims===4)return [boardColumn,boardRow,column,row];
+    return [column,row];
+  }
+
+  function projectionOrder(position) {
+    // Preserve the spatial axes of the existing cube/tesseract while
+    // accepting the new board-first coordinate order in the game.
+    if(position.length===3)return [position[1],position[2],position[0]];
+    if(position.length===4)return [position[2],position[3],position[0],position[1]];
+    return position.slice();
+  }
+
   function render3DCube(svg, moves, winningIndices, selected) {
     // Orthographic projection of a 3 × 3 × 3 cube. The three axes
     // have equal projected scale order, but intentionally different slopes
     // so marks inside the cube remain distinguishable on a small screen.
     const project=(x,y,z)=>[78+24*x-16*y,75+3*x+7*y-24*z];
-    const center=position=>project(...position.map(v=>v-.5));
+    const center=position=>project(...projectionOrder(position).map(v=>v-.5));
     function line(a,b,attrs={}) {
       svg.append(svgNode("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],
         "stroke-linecap":"round",...attrs}));
@@ -518,17 +532,17 @@ function browserApp() {
         const d=winners[i].position.reduce((s,v,k)=>s+(v-winners[j].position[k])**2,0);
         if(d>max){max=d;ends=[winners[i],winners[j]];}
       }
-      line(ends[0].position,ends[1].position,{stroke:"#229957","stroke-width":2.5,"stroke-opacity":.95});
+      line(projectionOrder(ends[0].position),projectionOrder(ends[1].position),{stroke:"#229957","stroke-width":2.5,"stroke-opacity":.95});
     }
     if(selected&&/^[123]{4}$/.test(selected)){
-      const [cx,cy]=project([...selected].map(Number));
+      const [cx,cy]=project(projectionOrder([...selected].map(Number)));
       svg.append(svgNode("circle",{cx,cy,r:4.9,fill:game.nextPlayer==="O"?"#ffe4e7":"#d7e9ff",stroke:game.nextPlayer==="O"?"#d9323d":"#1e66da","stroke-width":".8"}));
     }
     // Prioritize the most recent moves and winning marks when projections
     // overlap. The nine flat boards remain the unambiguous playing view.
     const ordered=moves.slice().sort((a,b)=>Number(winning.has(a.position.join("")))-Number(winning.has(b.position.join(""))));
     for(const m of ordered){
-      const [x,y]=project(m.position),won=winning.has(m.position.join(""));
+      const [x,y]=project(projectionOrder(m.position)),won=winning.has(m.position.join(""));
       if(won)svg.append(svgNode("circle",{cx:x,cy:y,r:5.1,fill:"#d5f7dc",stroke:"#229957","stroke-width":".75"}));
       svg.append(svgNode("text",{x,y,"text-anchor":"middle","dominant-baseline":"central",
         "font-family":"Arial, sans-serif","font-weight":"700","font-size":9.5,
@@ -588,10 +602,8 @@ function browserApp() {
       const step=side/3;
       svg.append(svgNode("rect",{x,y,width:side,height:side,rx:3,fill:"#fff",stroke:"#dbe4f0","stroke-width":1}));
       for(let r=0;r<3;r++) for(let c=0;c<3;c++) {
-        // Column first, row second; higher coordinates select boards.
-        const coords=[c+1,r+1];
-        if(dims>=3) coords.push(third);
-        if(dims===4) coords.push(fourth);
+        // Board coordinates precede the square coordinates in 3D and 4D.
+        const coords=flatCoordinates(dims,c+1,r+1,third,fourth);
         const key=coords.join("");
         const sx=x+c*step,sy=y+r*step;
         // Each entered digit narrows the matching cells by one dimension.
