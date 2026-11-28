@@ -175,6 +175,7 @@ function browserApp() {
     // Keep the original graphic grid cell reserved in 4D mode.
     // The live instructions are the last item in the history scroller.
     const heading=guide.querySelector(".guide-heading");
+    historyScroll.classList.toggle("guide-at-bottom",which==="4d");
     if(which==="4d") {
       if(guide.parentElement===historyScroll) return;
       const reserved=document.createElement("div");
@@ -185,7 +186,8 @@ function browserApp() {
       historyScroll.append(guide);
       guide.style.overflow="visible";
       guide.style.padding="8px 9px";
-      guide.style.margin="0 4px 8px";
+      // Auto top margin absorbs spare height, then collapses as moves accumulate.
+      guide.style.margin="auto 4px 8px";
       heading.style.marginBottom="0";
     } else {
       const reserved=document.getElementById("reserved4DGuideSpace");
