@@ -21,10 +21,10 @@
     <section class="panel history-panel" aria-label="Move history">
       <div class="history-scroller" id="historyScroller" tabindex="0" aria-label="Scrollable move history">
         <header class="app-header"><h1 id="gameTitle">Infinite Dimensional Tic-Tac-Toe</h1></header>
-        <h2>Move history</h2>
+        <h2 id="historyHeading" hidden>Move history</h2>
         <div class="history-table" id="historyTable"></div>
-        <div class="history-status" aria-live="polite">
-          <div id="turnStatus" class="turn-status">X to move</div>
+        <div class="history-status" id="historyStatus" aria-live="polite" hidden>
+          <div id="turnStatus" class="turn-status"></div>
           <div id="threatStatus" class="threat-status"></div>
           <div id="errorStatus" class="error-status"></div>
         </div>
@@ -48,7 +48,7 @@
             <label id="whiteCaption" for="whiteSelect">1st and 2nd Dimensions</label>
             <span id="coordCount" class="coordinate-count">0 of 2</span>
           </div>
-          <button type="button" id="whiteSelect" class="digit-field selected" aria-pressed="true"><span id="whiteValue">Enter move</span></button>
+          <button type="button" id="whiteSelect" class="digit-field selected" aria-pressed="true"><span id="whiteValue" class="turn-prompt x">X to move. Enter coordinates.</span></button>
         </div>
         <div class="field-group" id="yellowGroup" hidden>
           <div class="field-heading"><label for="yellowSelect">Infinite Repeating Dimensions</label></div>
