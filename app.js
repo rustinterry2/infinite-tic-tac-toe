@@ -571,6 +571,7 @@ function browserApp() {
     const occupied=new Map(game.moves.map(m=>[m.position.join(""),m.player]));
     const winning=new Set(game.winningIndices.map(i=>game.moves[i].position.join("")));
     const selected=whiteEntry.length===dims?whiteEntry:null;
+    const selectionColor=game.nextPlayer==="O"?"#ffe4e7":"#d7e9ff";
     const gap=3.5, side=Math.min((width-15-2*gap)/3,(height-18-2*gap)/3);
     function text(x,y,value,size=10) {
       svg.append(svgNode("text",{x,y,"text-anchor":"middle","font-family":"Arial, sans-serif",
@@ -591,7 +592,7 @@ function browserApp() {
         const partialMatch=whiteEntry.length>0&&key.startsWith(whiteEntry);
         if(winning.has(key)||partialMatch) svg.append(svgNode("rect",{
           x:sx+1,y:sy+1,width:step-2,height:step-2,rx:2,
-          fill:winning.has(key)?"#d5f7dc":"#d7e9ff"}));
+          fill:winning.has(key)?"#d5f7dc":selectionColor}));
         const player=occupied.get(key);
         if(player) {
           const size=Math.max(7,Math.min(13,step*.69));
