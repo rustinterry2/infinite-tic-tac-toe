@@ -28,7 +28,7 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
 .mode-bar button.active {background:#2b67d7;color:white;border-color:#83a8ed}
 .upper {flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px;overflow:clip}
 .history-panel {flex:1 1 0;min-height:0;display:flex;flex-direction:column;padding:9px 8px 7px;overflow:hidden}
-.history-panel h2 {padding:0 4px 8px;flex:none}
+.history-panel h2 {font-size:15px;padding:0 4px 3px;flex:none}
 .history-scroller {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .history-table {min-width:100%;width:max-content}
 .history-grid-row {display:grid;align-items:center;gap:3px;padding:5px 5px;min-height:38px;width:max-content;min-width:100%}
@@ -76,6 +76,12 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
   border-radius:8px;background:var(--cool);color:var(--navy);font-size:16px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
 .digit-field.selected {border-color:var(--blue)}
+/* Prompts can fit in either of the two narrower infinite-D fields. */
+.turn-prompt {display:block;padding:0 3px;white-space:normal;line-height:1.15;font-size:13px;font-weight:650}
+.field-grid:not(.finite) .turn-prompt {font-size:11px}
+.turn-prompt.x {color:var(--blue)}
+.turn-prompt.o {color:var(--red)}
+.turn-prompt.win {color:var(--green)}
 .digit-field.repeating {background:var(--warm)}
 .keypad {display:grid;grid-template-columns:minmax(0,1.35fr) repeat(3,minmax(0,1fr)) minmax(0,1.35fr);gap:6px;margin-top:8px}
 .keypad button {height:43px;border-radius:9px;border:1px solid var(--edge);
@@ -106,7 +112,7 @@ h2 {font-size:21px;font-weight:740;letter-spacing:-.35px;margin:0}
   .mode-bar {height:38px;padding:3px}
   .upper {gap:4px}
   .history-panel {padding:4px 6px}
-  .history-panel h2 {font-size:16px;padding-bottom:3px}
+  .history-panel h2 {font-size:14px;padding-bottom:3px}
   .guide-and-radial {height:clamp(96px,27dvh,150px)}
   .guide-and-radial .guide-area {padding:4px 6px}
   .guide-and-radial .guide-heading {font-size:11px;margin-bottom:2px}
