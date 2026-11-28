@@ -134,6 +134,7 @@ function browserApp() {
   const ui = {
     title:$("gameTitle"), modeBar:$("modeBar"), upper:$("upperScroll"),
     history:$("historyTable"), historyScroll:$("historyScroller"),
+    historyHeading:$("historyHeading"), historyStatus:$("historyStatus"),
     status:$("turnStatus"), warnings:$("threatStatus"), errors:$("errorStatus"),
     guideHeading:$("guideHeading"), guideBody:$("guideBody"), guideArea:$("guideArea"),
     graphic:$("gameSvg"), whiteBox:$("whiteSelect"), yellowBox:$("yellowSelect"),
@@ -268,11 +269,17 @@ function browserApp() {
     ui.count.hidden=!finite;
     ui.count.textContent=finite?`${whiteEntry.length} of ${game.dimensions}`:"";
     const preview=(s,defaultText="Tap to enter")=>s ? (s.length>9?"…":"")+s.slice(-9).split("").join(",") : defaultText;
-    // The active empty field carries the prompt instead of a separate heading.
-    // Infinite-D retains its two independently selectable coordinate fields.
-    const initialPrompt=!whiteEntry&&!yellowEntry;
-    ui.whiteValue.textContent=preview(whiteEntry,finite||(initialPrompt&&activeField==="white")?"Enter move":"Tap to enter");
-    ui.yellowValue.textContent=preview(yellowEntry,initialPrompt&&activeField==="yellow"?"Enter move":"Tap to enter");
+    // The empty active field tells the player whose turn it is. In ∞D
+    // the two fields remain separate; only the active empty field prompts.
+    const finished=Boolean(game.winner||game.draw);
+    const prompt=game.winner?game.winner+" wins!":game.draw?"Draw!":game.nextPlayer+" to move. Enter coordinates.";
+    function fieldValue(el,entry,isActive) {
+      const showPrompt=!entry&&isActive;
+      el.textContent=preview(entry,showPrompt?prompt:"Tap to enter");
+      el.className=showPrompt?"turn-prompt "+(finished?"win":game.nextPlayer.toLowerCase()):"";
+    }
+    fieldValue(ui.whiteValue,whiteEntry,finite||activeField==="white");
+    fieldValue(ui.yellowValue,yellowEntry,!finite&&activeField==="yellow");
     ui.whiteBox.classList.toggle("selected",finite || activeField==="white");
     ui.yellowBox.classList.toggle("selected",activeField==="yellow");
     ui.whiteBox.setAttribute("aria-pressed",String(finite || activeField==="white"));
@@ -290,6 +297,8 @@ function browserApp() {
   function renderHistory(scrollLatest=false) {
     const prevLeft=ui.historyScroll.scrollLeft, prevTop=ui.historyScroll.scrollTop;
     ui.history.replaceChildren();
+    ui.historyHeading.hidden=game.moves.length===0;
+    if(!game.moves.length)return;
     const finite=mode!=="inf";
     const widths=game.widths;
     const count=finite?game.dimensions:widths.white+widths.yellow;
@@ -320,10 +329,6 @@ function browserApp() {
         h.title="Repeating sequence"; header.append(h);
       }
     }
-    if(!game.moves.length) {
-      const noMoves=node("div","empty-history","No moves yet. X goes first.");
-      ui.history.append(noMoves);
-    }
     for (const [i,move] of game.moves.entries()) {
       const klass=game.winningIndices.includes(i)?"winning":
         game.threateningIndices.has(i)?`threat-${move.player.toLowerCase()}`:"";
@@ -340,7 +345,6 @@ function browserApp() {
     else ui.historyScroll.scrollTop=prevTop;
   }
   function renderStatus() {
-    const p=game.nextPlayer;
     if(game.winner) {
       ui.status.textContent=game.winner+" wins!";
       ui.status.className="turn-status win";
@@ -350,13 +354,14 @@ function browserApp() {
       ui.status.className="turn-status win";
       ui.warnings.textContent="";
     } else {
-      ui.status.textContent=p+" to move";
-      ui.status.className="turn-status " + p.toLowerCase();
+      ui.status.textContent="";
+      ui.status.className="turn-status";
       const counts=game.threatCounts;
       ui.warnings.textContent=["X","O"].filter(k=>counts[k]).map(k=>
         `${k}: ${counts[k]} threat${counts[k]===1?"":"s"}${counts[k]>1?" (fork)":""}`).join(" · ");
     }
     ui.errors.textContent=currentError;
+    ui.historyStatus.hidden=!(ui.status.textContent||ui.warnings.textContent||currentError);
   }
   function renderGuide() {
     let heading,body;
