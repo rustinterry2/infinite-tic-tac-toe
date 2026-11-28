@@ -97,26 +97,26 @@ function browserApp() {
   const finiteLessons = {
     2:[
       ["Learn the classic game","X goes first. Enter TWO digits using the 1, 2, 3 keypad, then press Go. The graphic shows where your coordinates land."],
-      ["Two coordinates","The 1st digit is the column (left to right). The 2nd is the row (top to bottom). For example, (1,1) means top left and (3,3) means bottom right."],
+      ["Two coordinates","The 1st digit is the row (top to bottom). The 2nd is the column (left to right). For example, (1,1) means top left and (3,3) means bottom right."],
       ["Three in a line wins","Place three Xs or three Os in a horizontal, vertical, or diagonal line. An opponent can block an incomplete line."],
       ["Eight possible lines","There are 3 rows, 3 columns and 2 diagonals. Every line follows the same coordinate pattern: stay fixed or go 1,2,3."]
     ],
     3:[
       ["Add a third dimension","Now there are THREE ordinary tic-tac-toe boards. Enter three digits using the keypad. The 3rd coordinate picks board 1, 2, or 3."],
-      ["Read all three digits","The 1st coordinate is the column, the 2nd is the row, and the 3rd is the board number. (2,3,1) means column 2, row 3 on board 1."],
+      ["Read all three digits","The 1st coordinate is the row, the 2nd is the column, and the 3rd is the board number. (2,3,1) means row 2, column 3 on board 1."],
       ["Win between boards","Lines on one board still count. New lines can also pass through multiple boards, one square on each board."],
       ["A three-dimensional diagonal","(1,1,1), (2,2,2), (3,3,3) is a winning line. Every coordinate goes 1,2,3, just as in 2D."]
     ],
     4:[
       ["Add a fourth dimension","Now THREE groups of THREE boards make nine small boards in a 3×3 arrangement. That gives 81 possible squares."],
-      ["Find the board by coordinates","The 1st digit is the square column; 2nd is its row. The 3rd digit picks the board COLUMN, and the 4th digit picks the board ROW."],
-      ["Four digits identify one square","(2,3,1,2) means column 2, row 3 on the board in column 1 and row 2 of the nine-board arrangement. Enter all four digits, then press Go."],
+      ["Find the board by coordinates","The 1st digit is the square row; 2nd is its column. The 3rd digit picks the board COLUMN, and the 4th digit picks the board ROW."],
+      ["Four digits identify one square","(2,3,1,2) means row 2, column 3 on the board in column 1 and row 2 of the nine-board arrangement. Enter all four digits, then press Go."],
       ["A four-dimensional diagonal","(1,1,1,1), (2,2,2,2), (3,3,3,3) form a line spanning three boards. New dimensions add ways to make lines."],
       ["The rule never changes","In EVERY dimension, a winning line either stays fixed, goes 1,2,3, or goes 3,2,1. Infinite-D extends this same idea to endless coordinates."]
     ]
   };
   const infinityLessons = [
-    ["Welcome","Each move describes a position with infinitely many coordinates. Enter optional Initial Dimensions and a required repeating pattern using 1, 2, and 3. Tap Go to play X."],
+    ["Add infinite dimensions","Each move describes a position with infinitely many coordinates. Enter optional Initial Dimensions and a required repeating pattern using 1, 2, and 3. Tap Go to play X."],
     ["Repeating forever","X has placed the first mark. The yellow digits repeat forever, so the position has infinitely many coordinates. O, enter a different position."],
     ["The objective","You need three of your own marks on a single straight line in all dimensions. A line may increase in one dimension, decrease in another, and stay constant in others."],
     ["Five allowed patterns","In each dimension, the three values must be 1-2-3, 3-2-1, 1-1-1, 2-2-2, or 3-3-3. The rule must hold in every dimension."],
@@ -182,17 +182,17 @@ function browserApp() {
       reserved.setAttribute("aria-hidden","true");
       guide.replaceWith(reserved);
       historyScroll.append(guide);
-      guide.style.background="transparent";
       guide.style.overflow="visible";
-      guide.style.padding="0 7px 10px";
+      guide.style.padding="8px 9px";
+      guide.style.margin="0 4px 8px";
       heading.style.marginBottom="0";
     } else {
       const reserved=document.getElementById("reserved4DGuideSpace");
       if(!reserved) return;
       reserved.replaceWith(guide);
-      guide.style.removeProperty("background");
       guide.style.removeProperty("overflow");
       guide.style.removeProperty("padding");
+      guide.style.removeProperty("margin");
       heading.style.removeProperty("margin-bottom");
     }
     guide.scrollTop=0;
@@ -580,12 +580,16 @@ function browserApp() {
       const step=side/3;
       svg.append(svgNode("rect",{x,y,width:side,height:side,rx:3,fill:"#fff",stroke:"#dbe4f0","stroke-width":1}));
       for(let r=0;r<3;r++) for(let c=0;c<3;c++) {
-        const coords=[c+1,r+1];
+        // Flat boards use row first, column second; higher coordinates select boards.
+        const coords=[r+1,c+1];
         if(dims>=3) coords.push(third);
         if(dims===4) coords.push(fourth);
         const key=coords.join("");
         const sx=x+c*step,sy=y+r*step;
-        if(winning.has(key)||selected===key) svg.append(svgNode("rect",{
+        // Each entered digit narrows the matching cells by one dimension.
+        // Keep the existing full-coordinate preview on the 3D cube separate.
+        const partialMatch=whiteEntry.length>0&&key.startsWith(whiteEntry);
+        if(winning.has(key)||partialMatch) svg.append(svgNode("rect",{
           x:sx+1,y:sy+1,width:step-2,height:step-2,rx:2,
           fill:winning.has(key)?"#d5f7dc":"#d7e9ff"}));
         const player=occupied.get(key);
